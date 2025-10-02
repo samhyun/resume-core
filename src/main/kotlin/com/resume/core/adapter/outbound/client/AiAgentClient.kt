@@ -2,12 +2,17 @@ package com.resume.core.adapter.outbound.client
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.resume.core.application.dto.write.CreateSessionCommand
+import com.resume.core.application.dto.write.RunAgentSessionCommand
 import com.resume.core.port.outbound.external.AiAgentPort
 import com.resume.core.port.outbound.external.AiAgentSession
+import com.resume.core.port.outbound.external.AiAgentStreamEvent
+import org.springframework.core.ParameterizedTypeReference
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
+import org.springframework.http.codec.ServerSentEvent
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 @Component
@@ -17,6 +22,7 @@ class AiAgentClient(
 ) : AiAgentPort {
 
     private val client = builder.baseUrl(baseUrl).build()
+    private val streamResponseType = object : ParameterizedTypeReference<ServerSentEvent<String>>() {}
 
     override fun createSession(req: CreateSessionCommand): Mono<AiAgentSession> {
         val ids = req.ids
@@ -30,6 +36,24 @@ class AiAgentClient(
             .bodyToMono(JsonNode::class.java)
             .map(::toAiAgentSession)
     }
+
+    override fun runSession(req: RunAgentSessionCommand): Flux<AiAgentStreamEvent> =
+        client.post()
+            .uri("/run_sse")
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.TEXT_EVENT_STREAM)
+            .bodyValue(req)
+            .retrieve()
+            .bodyToFlux(streamResponseType)
+            .map { event ->
+                AiAgentStreamEvent(
+                    id = event.id(),
+                    event = event.event(),
+                    data = event.data(),
+                    retry = event.retry()?.toMillis(),
+                    comment = event.comment()
+                )
+            }
 
     private fun toAiAgentSession(node: JsonNode): AiAgentSession {
         val stateNode: JsonNode = node.path("state")
