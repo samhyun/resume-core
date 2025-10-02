@@ -1,0 +1,71 @@
+server:
+  port: 8081
+
+# === 공통(로깅/헬스) ===
+logging:
+  level:
+    com.zaxxer.hikari: DEBUG
+    org.springframework.jdbc.datasource: DEBUG
+    org.springframework.security: INFO
+    org.flywaydb: DEBUG
+    org.springframework.boot.autoconfigure.flyway: DEBUG
+    org.springframework.jdbc: INFO
+    org.springframework.r2dbc: INFO
+    org.springframework.transaction: INFO
+
+spring:
+  flyway:
+    enabled: true
+    #    baseline-on-migrate: true
+    #    baseline-version: 1.0.0
+    locations:
+      - classpath:db/migration/postgres
+    table: resume_app_schema_history
+    url: jdbc:postgresql://localhost:5432/app_db
+    user: app_user
+    password: app_pass
+
+  #    schemas: public
+  #    default-schema: public
+
+#  datasource:
+#    url: jdbc:postgresql://localhost:5432/app_db
+#    username: app_user
+#    password: app_pass
+#    driver-class-name: org.postgresql.Driver
+  #    url: jdbc:postgresql://${APP_DB_HOST:localhost}:${APP_DB_PORT:5432}/${APP_DB_NAME:app_db}?sslmode=${APP_DB_SSLMODE:disable}
+  #    username: ${APP_DB_USER:app_user}
+  #    password: ${APP_DB_PASSWORD:app_pass}
+  #    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none   # 운영에선 validate 권장, 스키마 관리는 Flyway/Liquibase 사용 권장
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc.lob.non_contextual_creation: true
+        show_sql: true
+
+  security:
+    oauth2:
+      client:
+        registration:
+          keycloak:
+            client-id: resume-test
+            scope: openid,profile,email
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          keycloak:
+            issuer-uri: http://localhost:8080/realms/test-realm
+
+  r2dbc:
+    url: r2dbc:postgresql://${APP_DB_HOST:localhost}:${APP_DB_PORT:5432}/${APP_DB_NAME:app_db}?sslMode=${APP_DB_SSLMODE:disable}
+    username: ${APP_DB_USER:app_user}
+    password: ${APP_DB_PASSWORD:app_pass}
+#    pool:
+#      max-size: 20
+#      initial-size: 5
+#      max-idle-time: PT30S
+#      validation-query: SELECT 1

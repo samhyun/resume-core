@@ -1,0 +1,13 @@
+\connect app_db
+
+GRANT CONNECT, TEMP ON DATABASE app_db TO app_user;
+
+-- 앱은 기본 public 스키마 사용
+GRANT USAGE, CREATE ON SCHEMA public TO app_user;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON TABLES    TO app_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON SEQUENCES TO app_user;
+
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
