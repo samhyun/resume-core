@@ -4,10 +4,13 @@ import com.epages.restdocs.apispec.ResourceDocumentation.resource
 import com.epages.restdocs.apispec.ResourceSnippetParameters
 import com.epages.restdocs.apispec.Schema
 import com.epages.restdocs.apispec.WebTestClientRestDocumentationWrapper.document
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.resume.core.application.dto.write.CreateChatSessionResult
 import com.resume.core.application.dto.write.SessionPurpose
+import com.resume.core.application.usecase.read.StreamChatSessionUseCase
 import com.resume.core.application.usecase.write.CreateChatSessionUseCase
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.resume.core.support.docs.DocsFieldType.ENUM
+import com.resume.core.support.docs.DocsFieldType.STRING
 import com.resume.core.support.docs.fields
 import com.resume.core.support.docs.headers
 import com.resume.core.support.docs.requestFields
@@ -21,23 +24,23 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.http.HttpHeaders
-import org.springframework.restdocs.RestDocumentationContextProvider
-import org.springframework.restdocs.RestDocumentationExtension
-import org.springframework.restdocs.operation.preprocess.Preprocessors
 import org.springframework.http.MediaType
 import org.springframework.http.codec.json.Jackson2JsonDecoder
 import org.springframework.http.codec.json.Jackson2JsonEncoder
-import org.springframework.web.reactive.function.client.ExchangeStrategies
+import org.springframework.restdocs.RestDocumentationContextProvider
+import org.springframework.restdocs.RestDocumentationExtension
+import org.springframework.restdocs.operation.preprocess.Preprocessors
 import org.springframework.restdocs.webtestclient.WebTestClientRestDocumentation.documentationConfiguration
 import org.springframework.test.web.reactive.server.WebTestClient
+import org.springframework.web.reactive.function.client.ExchangeStrategies
 import reactor.core.publisher.Mono
 import java.util.UUID
-import com.resume.core.support.docs.DocsFieldType.*
 
 @ExtendWith(RestDocumentationExtension::class)
-class ChatSessionControllerDocs {
+class ChatControllerDocs {
 
-    private val useCase: CreateChatSessionUseCase = mockk()
+    private val createUseCase: CreateChatSessionUseCase = mockk()
+    private val streamUseCase: StreamChatSessionUseCase = mockk(relaxed = true)
 
     private lateinit var webTestClient: WebTestClient
 
@@ -45,7 +48,7 @@ class ChatSessionControllerDocs {
     fun setUp(restDocumentation: RestDocumentationContextProvider) {
         val mapper = jacksonObjectMapper()
 
-        webTestClient = WebTestClient.bindToController(ChatSessionController(useCase))
+        webTestClient = WebTestClient.bindToController(ChatController(createUseCase, streamUseCase))
             .configureClient()
             .exchangeStrategies(
                 ExchangeStrategies.builder()
@@ -80,7 +83,7 @@ class ChatSessionControllerDocs {
             status = "ACTIVE"
         )
 
-        every { useCase.handle(any()) } returns Mono.just(response)
+        every { createUseCase.handle(any()) } returns Mono.just(response)
 
         val request = mapOf(
             "appName" to "resume-agent",
@@ -89,7 +92,7 @@ class ChatSessionControllerDocs {
         )
 
         webTestClient.post()
-            .uri("/api/chat-sessions")
+            .uri("/api/chats/sessions")
             .header(HttpHeaders.AUTHORIZATION, "Bearer test-token")
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_JSON)
@@ -104,7 +107,7 @@ class ChatSessionControllerDocs {
                     Preprocessors.preprocessResponse(Preprocessors.prettyPrint()),
                     resource(
                         ResourceSnippetParameters.builder()
-                            .tag("Chat Sessions")
+                            .tag("Chats")
                             .summary("채팅 세션 생성")
                             .description("사용자와 연결된 AI 에이전트 세션을 생성합니다")
                             .requestFields {

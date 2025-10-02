@@ -50,7 +50,7 @@ docker compose -f docker/docker-compose.yml down -v
 | `./gradlew bootRun` | WebFlux 애플리케이션 구동 |
 
 ## API 문서화 워크플로
-1. `ChatSessionControllerDocs` 등 테스트에서 DSL(`fields { ... }`, `headers { ... }`)을 사용해 문서 갱신.
+1. `ChatControllerDocs` 등 테스트에서 DSL(`fields { ... }`, `headers { ... }`)을 사용해 문서 갱신.
 2. `./gradlew test openapi3` 실행으로 스니펫 + OpenAPI YAML 재생성.
 3. Swagger UI로 미리보기:
    ```bash
