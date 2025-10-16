@@ -52,6 +52,7 @@ dependencies {
     testImplementation("com.epages:restdocs-api-spec-webtestclient:0.18.2")
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("io.mockk:mockk:1.13.12")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
@@ -110,3 +111,4 @@ tasks.asciidoctor {
     inputs.dir(snippetsDir)
     dependsOn(tasks.test)
 }
+
