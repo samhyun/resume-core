@@ -24,7 +24,7 @@ import java.time.Duration
 import java.util.UUID
 
 @RestController
-@RequestMapping("/api/chats")
+@RequestMapping("/api/resume-core/chats")
 class ChatController(
     private val createChatSessionUseCase: CreateChatSessionUseCase,
     private val streamChatSessionUseCase: StreamChatSessionUseCase
@@ -42,14 +42,16 @@ class ChatController(
         consumes = [MediaType.MULTIPART_FORM_DATA_VALUE],
         produces = [MediaType.TEXT_EVENT_STREAM_VALUE]
     )
-    fun runSse(
+    fun runSseMultipart(
         @RequestPart("sessionId") sessionIdValue: String,
-        @RequestPart("text", required = false) text: String?,
-        @RequestPart("file", required = false) file: FilePart?,
+        @RequestPart("file") file: FilePart,
         @RequestPart("displayName", required = false) displayName: String?
-    ): Flux<ServerSentEvent<String>> =
-        streamChatSessionUseCase
-            .stream(buildCommand(sessionIdValue, text, file, displayName))
+    ): Flux<ServerSentEvent<String>> {
+        val sessionId = sessionIdValue.toUuidOrBadRequest()
+        val command = buildFileCommand(sessionId, file, displayName)
+
+        return streamChatSessionUseCase
+            .stream(command)
             .map { event ->
                 val builder = ServerSentEvent.builder<String>()
                 event.id?.let(builder::id)
@@ -59,27 +61,19 @@ class ChatController(
                 event.data?.let(builder::data)
                 builder.build()
             }
-
-    private fun buildCommand(
-        sessionIdValue: String,
-        text: String?,
-        file: FilePart?,
-        displayName: String?
-    ): RunChatSessionCommand {
-        val sessionId = sessionIdValue.toUuidOrBadRequest()
-
-        return when {
-            text != null && file == null -> buildTextCommand(sessionId, text)
-            text == null && file != null -> buildFileCommand(sessionId, file, displayName)
-            else -> throw ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "Provide either text or file, but not both"
-            )
-        }
     }
 
-    private fun buildTextCommand(sessionId: UUID, rawText: String): RunChatSessionCommand {
-        val normalized = rawText.trim()
+    @PostMapping(
+        "/run-sse",
+        consumes = [MediaType.APPLICATION_JSON_VALUE],
+        produces = [MediaType.TEXT_EVENT_STREAM_VALUE]
+    )
+    fun runSseJson(
+        @RequestBody request: RunChatSessionRequest
+    ): Flux<ServerSentEvent<String>> {
+        val sessionId = request.sessionId.toUuidOrBadRequest()
+        val normalized = request.text.trim()
+
         if (normalized.isEmpty()) {
             throw ResponseStatusException(
                 HttpStatus.BAD_REQUEST,
@@ -87,7 +81,19 @@ class ChatController(
             )
         }
 
-        return RunChatSessionCommand.text(sessionId, normalized)
+        val command = RunChatSessionCommand.text(sessionId, normalized)
+
+        return streamChatSessionUseCase
+            .stream(command)
+            .map { event ->
+                val builder = ServerSentEvent.builder<String>()
+                event.id?.let(builder::id)
+                event.event?.let(builder::event)
+                event.retry?.let { builder.retry(Duration.ofMillis(it)) }
+                event.comment?.let(builder::comment)
+                event.data?.let(builder::data)
+                builder.build()
+            }
     }
 
     private fun buildFileCommand(
@@ -166,5 +172,10 @@ data class CreateChatSessionResponse(
             )
     }
 }
+
+data class RunChatSessionRequest(
+    val sessionId: String,
+    val text: String
+)
 
 private fun generateSessionId(): String = "session-${UUID.randomUUID()}"
