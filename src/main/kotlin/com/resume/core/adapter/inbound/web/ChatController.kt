@@ -50,18 +50,20 @@ class ChatController(
         val sessionId = sessionIdValue.toUuidOrBadRequest()
         val command = buildFileCommand(sessionId, file, displayName)
 
-        return streamChatSessionUseCase
-            .stream(command)
-            .map { event ->
-                val builder = ServerSentEvent.builder<String>()
-                event.id?.let(builder::id)
-                event.event?.let(builder::event)
-                event.retry?.let { builder.retry(Duration.ofMillis(it)) }
-                event.comment?.let(builder::comment)
-                event.data?.let(builder::data)
-                builder.build()
-            }
+        return callChatSessionUseCase(command)
     }
+
+    private fun callChatSessionUseCase(command: RunChatSessionCommand): Flux<ServerSentEvent<String>> = streamChatSessionUseCase
+        .stream(command)
+        .map { event ->
+            val builder = ServerSentEvent.builder<String>()
+            event.id?.let(builder::id)
+            event.event?.let(builder::event)
+            event.retry?.let { builder.retry(Duration.ofMillis(it)) }
+            event.comment?.let(builder::comment)
+            event.data?.let(builder::data)
+            builder.build()
+        }
 
     @PostMapping(
         "/run-sse",
@@ -83,17 +85,7 @@ class ChatController(
 
         val command = RunChatSessionCommand.text(sessionId, normalized)
 
-        return streamChatSessionUseCase
-            .stream(command)
-            .map { event ->
-                val builder = ServerSentEvent.builder<String>()
-                event.id?.let(builder::id)
-                event.event?.let(builder::event)
-                event.retry?.let { builder.retry(Duration.ofMillis(it)) }
-                event.comment?.let(builder::comment)
-                event.data?.let(builder::data)
-                builder.build()
-            }
+        return callChatSessionUseCase(command)
     }
 
     private fun buildFileCommand(

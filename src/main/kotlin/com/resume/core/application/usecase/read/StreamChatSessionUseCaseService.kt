@@ -9,6 +9,7 @@ import com.resume.core.application.dto.write.RunAgentSessionCommand
 import com.resume.core.application.dto.write.RunChatSessionCommand
 import com.resume.core.port.outbound.external.AiAgentPort
 import com.resume.core.port.outbound.external.AiAgentStreamEvent
+import org.springframework.core.io.buffer.DataBuffer
 import org.springframework.core.io.buffer.DataBufferUtils
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -56,17 +57,20 @@ class StreamChatSessionUseCaseService(
             )
         )
         is ChatMessagePayload.File -> DataBufferUtils.join(part.content())
-            .map { buffer ->
+            .handle { buffer: DataBuffer, sink ->
                 val bytes = ByteArray(buffer.readableByteCount())
                 buffer.read(bytes)
                 DataBufferUtils.release(buffer)
                 if (bytes.isEmpty()) {
-                    throw ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "File data must not be empty"
+                    sink.error(
+                        ResponseStatusException(
+                            HttpStatus.BAD_REQUEST,
+                            "File data must not be empty"
+                        )
                     )
+                    return@handle
                 }
-                Base64.getEncoder().encodeToString(bytes)
+                sink.next(Base64.getEncoder().encodeToString(bytes))
             }
             .map { encoded ->
                 AgentMessage(

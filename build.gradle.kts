@@ -68,6 +68,10 @@ dependencies {
     implementation("org.flywaydb:flyway-core:11.12.0")
     runtimeOnly("org.flywaydb:flyway-database-postgresql:11.12.0")
 
+    implementation("org.apache.tika:tika-core:2.9.2")
+    implementation("org.apache.tika:tika-parsers-standard-package:2.9.2")
+    // (선택) kotlinx-coroutines-reactor 쓰면 비동기 처리 편함
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.8.1")
 }
 
 openapi3 {
