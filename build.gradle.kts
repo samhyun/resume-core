@@ -28,6 +28,17 @@ extra["snippetsDir"] = file("build/generated-snippets")
 val snippetsDir = project.extra["snippetsDir"] as File
 
 
+val restdocsApiSpecVersion = "0.18.2"
+val mockkVersion = "1.13.12"
+val mockitoKotlinVersion = "5.4.0"
+val postgresDriverVersion = "42.7.7"
+val r2dbcPostgresVersion = "1.0.7.RELEASE"
+val flywayVersion = "11.12.0"
+val tikaVersion = "2.9.2"
+val kotlinxCoroutinesVersion = "1.8.1"
+val mockwebserverVersion = "4.12.0"
+
+
 //apply(from = "${rootDir}/gradle/querydsl.gradle")
 
 
@@ -42,36 +53,32 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("io.projectreactor.kotlin:reactor-kotlin-extensions")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:$kotlinxCoroutinesVersion")
+    implementation("org.postgresql:r2dbc-postgresql:$r2dbcPostgresVersion")
+    implementation("org.flywaydb:flyway-core:$flywayVersion")
+    implementation("org.apache.tika:tika-core:$tikaVersion")
+    implementation("org.apache.tika:tika-parsers-standard-package:$tikaVersion")
+
+    // https://mvnrepository.com/artifact/org.postgresql/postgresql
+    runtimeOnly("org.postgresql:postgresql:$postgresDriverVersion")
+    runtimeOnly("org.flywaydb:flyway-database-postgresql:$flywayVersion")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
     testImplementation("org.springframework.restdocs:spring-restdocs-webtestclient")
-    testImplementation("com.epages:restdocs-api-spec:0.18.2")
-    testImplementation("com.epages:restdocs-api-spec-webtestclient:0.18.2")
+    testImplementation("com.epages:restdocs-api-spec:$restdocsApiSpecVersion")
+    testImplementation("com.epages:restdocs-api-spec-webtestclient:$restdocsApiSpecVersion")
     testImplementation("org.springframework.security:spring-security-test")
-    testImplementation("io.mockk:mockk:1.13.12")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
+    testImplementation("io.mockk:mockk:$mockkVersion")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:$mockitoKotlinVersion")
     testImplementation("org.testcontainers:junit-jupiter")
     testImplementation("org.testcontainers:postgresql")
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("org.testcontainers:r2dbc")
+    testImplementation("com.squareup.okhttp3:mockwebserver:$mockwebserverVersion")
+
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-
-    // https://mvnrepository.com/artifact/org.postgresql/postgresql
-    runtimeOnly("org.postgresql:postgresql:42.7.7")
-
-    // https://mvnrepository.com/artifact/org.postgresql/r2dbc-postgresql
-    implementation("org.postgresql:r2dbc-postgresql:1.0.7.RELEASE")
-
-    // https://mvnrepository.com/artifact/org.flywaydb/flyway-core
-    implementation("org.flywaydb:flyway-core:11.12.0")
-    runtimeOnly("org.flywaydb:flyway-database-postgresql:11.12.0")
-
-    implementation("org.apache.tika:tika-core:2.9.2")
-    implementation("org.apache.tika:tika-parsers-standard-package:2.9.2")
-    // (선택) kotlinx-coroutines-reactor 쓰면 비동기 처리 편함
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.8.1")
 }
 
 openapi3 {
@@ -115,4 +122,3 @@ tasks.asciidoctor {
     inputs.dir(snippetsDir)
     dependsOn(tasks.test)
 }
-
