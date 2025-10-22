@@ -107,7 +107,7 @@ class StreamChatSessionUseCaseServiceTest {
     @Test
     fun `stream fails when chat session does not exist`() {
         val sessionId = UUID.randomUUID()
-        every { repository.findById(sessionId) } returns Mono.empty()
+        every { repository.findById(sessionId) } returns Mono.empty<ChatSessionEntity>()
 
         StepVerifier.create(useCase.stream(RunChatSessionCommand.text(sessionId, "Hi")))
             .expectErrorSatisfies { error ->
@@ -185,9 +185,9 @@ class StreamChatSessionUseCaseServiceTest {
                 Flux.fromIterable(payloads.map { bytes -> factory.wrap(bytes.copyOf()) })
             }
 
-            override fun transferTo(dest: File) = Mono.empty<Void>()
+            override fun transferTo(dest: File): Mono<Void> = Mono.empty()
 
-            override fun transferTo(dest: Path) = Mono.empty<Void>()
+            override fun transferTo(dest: Path): Mono<Void> = Mono.empty()
         }
     }
 }
