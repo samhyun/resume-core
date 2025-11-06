@@ -4,6 +4,7 @@ import com.resume.core.adapter.outbound.persistence.command.entity.ResumeEntity
 import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.reactive.ReactiveCrudRepository
 import org.springframework.stereotype.Repository
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.util.UUID
 
@@ -31,6 +32,18 @@ interface ResumeRepository : ReactiveCrudRepository<ResumeEntity, UUID> {
         LIMIT 1
     """)
     fun findActiveByUserId(userId: String): Mono<ResumeEntity>
+
+    /**
+     * Retrieve all resumes for a user ordered by creation time descending
+     */
+    @Query(
+        """
+        SELECT * FROM resume
+        WHERE user_id = :userId
+        ORDER BY created_at DESC
+        """
+    )
+    fun findAllByUserId(userId: String): Flux<ResumeEntity>
 
     /**
      * Deactivate all active resumes for a user

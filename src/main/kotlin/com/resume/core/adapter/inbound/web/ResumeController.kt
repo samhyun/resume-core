@@ -3,11 +3,15 @@ package com.resume.core.adapter.inbound.web
 import com.resume.core.adapter.inbound.web.model.GetResumeResponse
 import com.resume.core.adapter.inbound.web.model.SaveResumeRequest
 import com.resume.core.adapter.inbound.web.model.SaveResumeResponse
+import com.resume.core.adapter.inbound.web.model.UpdateResumeResponse
 import com.resume.core.application.dto.read.GetActiveResumeQuery
 import com.resume.core.application.dto.read.GetResumeQuery
+import com.resume.core.application.dto.read.ListResumesQuery
 import com.resume.core.application.usecase.read.GetActiveResumeUseCase
 import com.resume.core.application.usecase.read.GetResumeUseCase
+import com.resume.core.application.usecase.read.ListResumesUseCase
 import com.resume.core.application.usecase.write.SaveResumeUseCase
+import com.resume.core.application.usecase.write.UpdateResumeUseCase
 import com.resume.core.adapter.inbound.web.support.ReactiveJwtAuthenticationFacade
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
@@ -23,8 +27,10 @@ import java.util.UUID
 @RequestMapping("/api/resume-core/resumes")
 class ResumeController(
     private val saveResumeUseCase: SaveResumeUseCase,
+    private val updateResumeUseCase: UpdateResumeUseCase,
     private val getResumeUseCase: GetResumeUseCase,
     private val getActiveResumeUseCase: GetActiveResumeUseCase,
+    private val listResumesUseCase: ListResumesUseCase,
     private val authenticationFacade: ReactiveJwtAuthenticationFacade
 ) {
 
@@ -42,6 +48,39 @@ class ResumeController(
                 saveResumeUseCase
                     .handle(request.toCommand(userId))
                     .map(SaveResumeResponse::from)
+            }
+    }
+
+    /**
+     * List all resumes owned by the authenticated user ordered by creation date desc
+     */
+    @GetMapping
+    fun listResumes(): Mono<List<GetResumeResponse>> {
+        return authenticationFacade.currentUserId()
+            .flatMapMany { userId ->
+                listResumesUseCase
+                    .handle(ListResumesQuery(userId))
+            }
+            .map(GetResumeResponse::from)
+            .collectList()
+    }
+
+    /**
+     * Update an existing resume by ID
+     * Requires ownership validation through authentication facade
+     */
+    @PutMapping("/{resumeId}")
+    fun updateResume(
+        @PathVariable resumeId: String,
+        @RequestBody request: SaveResumeRequest
+    ): Mono<UpdateResumeResponse> {
+        val uuid = resumeId.toUuidOrBadRequest()
+
+        return authenticationFacade.currentUserId()
+            .flatMap { userId ->
+                updateResumeUseCase
+                    .handle(request.toUpdateCommand(uuid, userId))
+                    .map(UpdateResumeResponse::from)
             }
     }
 

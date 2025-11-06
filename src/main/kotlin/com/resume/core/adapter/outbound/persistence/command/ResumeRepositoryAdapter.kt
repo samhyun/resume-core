@@ -29,6 +29,20 @@ class ResumeRepositoryAdapter(
             .map { it.toDomain() }
     }
 
+    override fun update(resume: Resume): Mono<Resume> {
+        val entity = ResumeEntity.from(resume).markPersisted()
+
+        return repository.save(entity)
+            .flatMap {
+                repository.findByIdAndUserId(resume.id, resume.userId)
+            }
+            .map { it.toDomain() }
+    }
+
+    override fun findAllByUserId(userId: String) =
+        repository.findAllByUserId(userId)
+            .map { it.toDomain() }
+
     override fun findByIdAndUserId(resumeId: UUID, userId: String): Mono<Resume> =
         repository.findByIdAndUserId(resumeId, userId)
             .map { it.toDomain() }

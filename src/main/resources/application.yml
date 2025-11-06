@@ -47,18 +47,18 @@ spring:
         jdbc.lob.non_contextual_creation: true
         show_sql: true
 
-  security:
-    oauth2:
-      client:
-        registration:
-          keycloak:
-            client-id: resume-test
-            scope: openid,profile,email
-            authorization-grant-type: authorization_code
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
-        provider:
-          keycloak:
-            issuer-uri: http://localhost:8080/realms/test-realm
+#  security:
+#    oauth2:
+#      client:
+#        registration:
+#          keycloak:
+#            client-id: resume-client
+#            scope: openid,profile,email
+#            authorization-grant-type: authorization_code
+#            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+#        provider:
+#          keycloak:
+#            issuer-uri: http://localhost:8080/realms/resume-realm
 
   r2dbc:
     url: r2dbc:postgresql://${APP_DB_HOST:localhost}:${APP_DB_PORT:5432}/${APP_DB_NAME:app_db}?sslMode=${APP_DB_SSLMODE:disable}

@@ -2,7 +2,9 @@ package com.resume.core.application.usecase.read
 
 import com.resume.core.application.dto.read.GetActiveResumeQuery
 import com.resume.core.application.dto.read.GetResumeQuery
+import com.resume.core.application.dto.read.ListResumesQuery
 import com.resume.core.domain.model.Resume
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
@@ -17,4 +19,11 @@ fun interface GetResumeUseCase {
  */
 fun interface GetActiveResumeUseCase {
     fun handle(query: GetActiveResumeQuery): Mono<Resume>
+}
+
+/**
+ * Use case interface for listing all resumes for a user
+ */
+fun interface ListResumesUseCase {
+    fun handle(query: ListResumesQuery): Flux<Resume>
 }

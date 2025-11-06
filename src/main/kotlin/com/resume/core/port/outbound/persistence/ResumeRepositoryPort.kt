@@ -1,6 +1,7 @@
 package com.resume.core.port.outbound.persistence
 
 import com.resume.core.domain.model.Resume
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.util.UUID
 
@@ -14,6 +15,17 @@ interface ResumeRepositoryPort {
      * Deactivates any existing active resume for the user before saving
      */
     fun save(resume: Resume): Mono<Resume>
+
+    /**
+     * Update an existing resume
+     * Does not change active status; preserves createdAt while refreshing update metadata
+     */
+    fun update(resume: Resume): Mono<Resume>
+
+    /**
+     * Retrieve all resumes for a user ordered by creation date desc
+     */
+    fun findAllByUserId(userId: String): Flux<Resume>
 
     /**
      * Find a resume by its ID and user ID
