@@ -3,6 +3,8 @@ package com.resume.core.adapter.inbound.web.model
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.resume.core.application.dto.write.SaveResumeCommand
 import com.resume.core.application.dto.write.SaveResumeResult
+import com.resume.core.application.dto.write.UpdateResumeCommand
+import com.resume.core.application.dto.write.UpdateResumeResult
 import com.resume.core.domain.model.*
 import java.util.UUID
 
@@ -24,15 +26,25 @@ data class SaveResumeRequest(
     fun toCommand(userId: String): SaveResumeCommand =
         SaveResumeCommand(
             userId = userId,
-            resumeData = ResumeData(
-                summary = summary.toDomain(),
-                experience = experience.map { it.toDomain() },
-                skills = skills.toDomain(),
-                projects = projects?.map { it.toDomain() },
-                education = education.map { it.toDomain() },
-                certificationsAwards = certificationsAwards?.map { it.toDomain() },
-                additionalInfo = additionalInfo?.toDomain()
-            )
+            resumeData = toResumeData()
+        )
+
+    fun toUpdateCommand(resumeId: UUID, userId: String): UpdateResumeCommand =
+        UpdateResumeCommand(
+            resumeId = resumeId,
+            userId = userId,
+            resumeData = toResumeData()
+        )
+
+    private fun toResumeData(): ResumeData =
+        ResumeData(
+            summary = summary.toDomain(),
+            experience = experience.map { it.toDomain() },
+            skills = skills.toDomain(),
+            projects = projects?.map { it.toDomain() },
+            education = education.map { it.toDomain() },
+            certificationsAwards = certificationsAwards?.map { it.toDomain() },
+            additionalInfo = additionalInfo?.toDomain()
         )
 }
 
@@ -47,6 +59,24 @@ data class SaveResumeResponse(
     companion object {
         fun from(result: SaveResumeResult): SaveResumeResponse =
             SaveResumeResponse(
+                resumeId = result.resumeId,
+                userId = result.userId,
+                version = result.version
+            )
+    }
+}
+
+/**
+ * Response model for updated resume
+ */
+data class UpdateResumeResponse(
+    val resumeId: UUID,
+    val userId: String,
+    val version: Int
+) {
+    companion object {
+        fun from(result: UpdateResumeResult): UpdateResumeResponse =
+            UpdateResumeResponse(
                 resumeId = result.resumeId,
                 userId = result.userId,
                 version = result.version

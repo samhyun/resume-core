@@ -2,9 +2,11 @@ package com.resume.core.application.usecase.read
 
 import com.resume.core.application.dto.read.GetActiveResumeQuery
 import com.resume.core.application.dto.read.GetResumeQuery
+import com.resume.core.application.dto.read.ListResumesQuery
 import com.resume.core.domain.model.Resume
 import com.resume.core.port.outbound.persistence.ResumeRepositoryPort
 import org.springframework.stereotype.Service
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 
 /**
@@ -31,4 +33,17 @@ class GetActiveResumeUseCaseService(
 
     override fun handle(query: GetActiveResumeQuery): Mono<Resume> =
         resumeRepository.findActiveByUserId(query.userId)
+}
+
+/**
+ * Service implementing ListResumesUseCase
+ * Retrieves all resumes for the authenticated user
+ */
+@Service
+class ListResumesUseCaseService(
+    private val resumeRepository: ResumeRepositoryPort
+) : ListResumesUseCase {
+
+    override fun handle(query: ListResumesQuery): Flux<Resume> =
+        resumeRepository.findAllByUserId(query.userId)
 }

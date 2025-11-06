@@ -8,8 +8,7 @@ CREATE TABLE IF NOT EXISTS resume (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     version INTEGER NOT NULL DEFAULT 1,
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    CONSTRAINT fk_resume_user FOREIGN KEY (user_id) REFERENCES app_user(user_id) ON DELETE CASCADE
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 -- Create index for efficient user-based queries
@@ -41,3 +40,4 @@ COMMENT ON TABLE resume IS 'Stores user resumes with flexible JSONB structure fo
 COMMENT ON COLUMN resume.resume_data IS 'Complete resume data in JSON format matching FinalResume TypeScript interface';
 COMMENT ON COLUMN resume.is_active IS 'Flag to mark current active resume (supports draft/published versions)';
 COMMENT ON COLUMN resume.version IS 'Optimistic locking version counter, auto-incremented on updates';
+COMMENT ON COLUMN resume.user_id IS 'User identifier from Keycloak (no FK constraint as users are managed externally)';

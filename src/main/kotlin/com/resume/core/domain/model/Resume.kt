@@ -14,6 +14,7 @@ data class Resume(
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
     val version: Int,
+    /** Indicates whether this resume is currently marked as the active one for the user */
     val isActive: Boolean
 )
 

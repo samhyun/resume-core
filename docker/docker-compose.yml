@@ -12,24 +12,24 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d  # 아래 init 스크립트 자동 실행
 
-  keycloak:
-    image: quay.io/keycloak/keycloak:25.0.6
-    container_name: kc
-    depends_on:
-      - postgres
-    command: ["start-dev", "--http-port=8080"]
-    environment:
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
-      KC_DB_USERNAME: kc_user
-      KC_DB_PASSWORD: kc_pass
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./providers:/opt/keycloak/providers
-    restart: unless-stopped
+#  keycloak:
+#    image: quay.io/keycloak/keycloak:25.0.6
+#    container_name: kc
+#    depends_on:
+#      - postgres
+#    command: ["start-dev", "--http-port=8080"]
+#    environment:
+#      KC_DB: postgres
+#      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
+#      KC_DB_USERNAME: kc_user
+#      KC_DB_PASSWORD: kc_pass
+#      KEYCLOAK_ADMIN: admin
+#      KEYCLOAK_ADMIN_PASSWORD: admin
+#    ports:
+#      - "8080:8080"
+#    volumes:
+#      - ./providers:/opt/keycloak/providers
+#    restart: unless-stopped
 
 volumes:
   pgdata:

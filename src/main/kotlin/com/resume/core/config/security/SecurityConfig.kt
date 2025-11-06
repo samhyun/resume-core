@@ -47,7 +47,7 @@ class SecurityConfig {
 
     @Bean
     fun reactiveJwtDecoder(): ReactiveJwtDecoder =
-        ReactiveJwtDecoders.fromIssuerLocation("http://localhost:8080/realms/test-realm")
+        ReactiveJwtDecoders.fromIssuerLocation("http://localhost:8080/realms/resume-realm")
 
     /**
      * realm_access.roles / resource_access.{client}.roles -> ROLE_* 매핑

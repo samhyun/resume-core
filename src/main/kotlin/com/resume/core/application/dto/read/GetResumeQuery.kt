@@ -16,3 +16,10 @@ data class GetResumeQuery(
 data class GetActiveResumeQuery(
     val userId: String
 )
+
+/**
+ * Query for retrieving all resumes owned by a user
+ */
+data class ListResumesQuery(
+    val userId: String
+)
