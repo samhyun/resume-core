@@ -18,9 +18,9 @@ data class SaveResumeRequest(
     val skills: SkillsDto,
     val projects: List<IndependentProjectDto>? = null,
     val education: List<EducationDto>,
-    @JsonProperty("certifications_awards")
+    @param:JsonProperty("certifications_awards")
     val certificationsAwards: List<CertificationAwardDto>? = null,
-    @JsonProperty("additional_info")
+    @param:JsonProperty("additional_info")
     val additionalInfo: AdditionalInfoDto? = null
 ) {
     fun toCommand(userId: String): SaveResumeCommand =
@@ -96,9 +96,9 @@ data class GetResumeResponse(
     val skills: SkillsDto,
     val projects: List<IndependentProjectDto>? = null,
     val education: List<EducationDto>,
-    @JsonProperty("certifications_awards")
+    @param:JsonProperty("certifications_awards")
     val certificationsAwards: List<CertificationAwardDto>? = null,
-    @JsonProperty("additional_info")
+    @param:JsonProperty("additional_info")
     val additionalInfo: AdditionalInfoDto? = null,
     val version: Int,
     val isActive: Boolean
@@ -126,7 +126,7 @@ data class GetResumeResponse(
 data class ResumeSummaryDto(
     val headline: String,
     val profile: List<String>,
-    @JsonProperty("core_strengths")
+    @param:JsonProperty("core_strengths")
     val coreStrengths: List<String>
 ) {
     fun toDomain(): ResumeSummary = ResumeSummary(headline, profile, coreStrengths)
@@ -237,7 +237,7 @@ data class EducationDto(
     val institution: String,
     val degree: String,
     val major: String,
-    @JsonProperty("graduation_year")
+    @param:JsonProperty("graduation_year")
     val graduationYear: String,
     val gpa: String? = null,
     val achievements: List<String>? = null
@@ -274,9 +274,9 @@ data class CertificationAwardDto(
 data class AdditionalInfoDto(
     val publications: List<String>? = null,
     val patents: List<String>? = null,
-    @JsonProperty("speaking_activities")
+    @param:JsonProperty("speaking_activities")
     val speakingActivities: List<String>? = null,
-    @JsonProperty("target_position")
+    @param:JsonProperty("target_position")
     val targetPosition: String? = null
 ) {
     fun toDomain(): AdditionalInfo =
