@@ -5,40 +5,42 @@ import com.epages.restdocs.apispec.ResourceSnippetParameters
 import com.epages.restdocs.apispec.Schema
 import com.epages.restdocs.apispec.WebTestClientRestDocumentationWrapper.document
 import com.resume.core.adapter.inbound.web.support.ReactiveJwtAuthenticationFacade
+import com.resume.core.application.dto.read.ResumePdfResult
 import com.resume.core.application.dto.write.SaveResumeResult
 import com.resume.core.application.dto.write.UpdateResumeResult
+import com.resume.core.application.usecase.read.GenerateResumePdfUseCase
 import com.resume.core.application.usecase.read.GetActiveResumeUseCase
 import com.resume.core.application.usecase.read.GetResumeUseCase
 import com.resume.core.application.usecase.read.ListResumesUseCase
+import com.resume.core.application.usecase.write.DeleteResumeUseCase
 import com.resume.core.application.usecase.write.SaveResumeUseCase
 import com.resume.core.application.usecase.write.UpdateResumeUseCase
 import com.resume.core.domain.model.*
+import com.resume.core.support.docs.*
 import com.resume.core.support.docs.DocsFieldType.*
-import com.resume.core.support.docs.requestFields
-import com.resume.core.support.docs.requestHeaders
-import com.resume.core.support.docs.responseFields
 import com.resume.core.support.security.MockJwtWebFilter
-import org.mockito.BDDMockito.given
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.mockito.BDDMockito.given
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.security.oauth2.client.reactive.ReactiveOAuth2ClientAutoConfiguration
 import org.springframework.boot.autoconfigure.security.oauth2.resource.reactive.ReactiveOAuth2ResourceServerAutoConfiguration
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest
-import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.restdocs.RestDocumentationContextProvider
 import org.springframework.restdocs.RestDocumentationExtension
+import org.springframework.restdocs.generate.RestDocumentationGenerator
 import org.springframework.restdocs.operation.preprocess.Preprocessors
 import org.springframework.restdocs.webtestclient.WebTestClientRestDocumentation
 import org.springframework.test.context.ContextConfiguration
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.LocalDateTime
-import java.util.UUID
+import java.util.*
 
 @WebFluxTest(
     controllers = [ResumeController::class],
@@ -61,6 +63,9 @@ class ResumeControllerDocs {
     lateinit var updateResumeUseCase: UpdateResumeUseCase
 
     @MockitoBean
+    lateinit var deleteResumeUseCase: DeleteResumeUseCase
+
+    @MockitoBean
     lateinit var getResumeUseCase: GetResumeUseCase
 
     @MockitoBean
@@ -68,6 +73,9 @@ class ResumeControllerDocs {
 
     @MockitoBean
     lateinit var getActiveResumeUseCase: GetActiveResumeUseCase
+
+    @MockitoBean
+    lateinit var generateResumePdfUseCase: GenerateResumePdfUseCase
 
     @BeforeEach
     fun setUp(restDocumentation: RestDocumentationContextProvider) {
@@ -100,6 +108,10 @@ class ResumeControllerDocs {
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_JSON)
             .bodyValue(request)
+            .attribute(
+                RestDocumentationGenerator.ATTRIBUTE_NAME_URL_TEMPLATE,
+                "/api/resume-core/resumes"
+            )
             .exchange()
             .expectStatus().isCreated
             .expectBody()
@@ -222,6 +234,10 @@ class ResumeControllerDocs {
             .contentType(MediaType.APPLICATION_JSON)
             .accept(MediaType.APPLICATION_JSON)
             .bodyValue(request)
+            .attribute(
+                RestDocumentationGenerator.ATTRIBUTE_NAME_URL_TEMPLATE,
+                "/api/resume-core/resumes/{resumeId}"
+            )
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -322,6 +338,53 @@ class ResumeControllerDocs {
     }
 
     @Test
+    fun `document delete resume`() {
+        val resumeId = UUID.fromString("12345678-1234-1234-1234-123456789abc")
+
+        given(deleteResumeUseCase.handle(org.mockito.kotlin.any())).willReturn(Mono.empty())
+
+        webTestClient
+            .delete()
+            .uri("/api/resume-core/resumes/{resumeId}", resumeId)
+            .header(HttpHeaders.AUTHORIZATION, "Bearer test-token")
+            .attribute(
+                RestDocumentationGenerator.ATTRIBUTE_NAME_URL_TEMPLATE,
+                "/api/resume-core/resumes/{resumeId}"
+            )
+            .exchange()
+            .expectStatus().isNoContent
+            .expectBody()
+            .consumeWith(
+                document(
+                    "resume-delete",
+                    Preprocessors.preprocessRequest(Preprocessors.prettyPrint()),
+                    Preprocessors.preprocessResponse(Preprocessors.prettyPrint()),
+                    resource(
+                        ResourceSnippetParameters.builder()
+                            .tag("Resumes")
+                            .summary("이력서 삭제")
+                            .description(
+                                """
+                                특정 이력서를 삭제합니다.
+                                - JWT의 사용자 ID와 일치하는 이력서만 삭제할 수 있습니다.
+                                - 존재하지 않는 경우 404 Not Found.
+                                """.trimIndent()
+                            )
+                            .requestHeaders {
+                                HttpHeaders.AUTHORIZATION header "Keycloak 발급 Bearer 토큰" optional false
+                            }
+                            .pathParameters {
+                                "resumeId" type STRING means "삭제할 이력서 ID (UUID)"
+                            }
+                            .responseFields { }
+                            .build()
+                    )
+                )
+            )
+            .isEmpty
+    }
+
+    @Test
     fun `document list resumes`() {
         val userId = "test-user"
         val first = createSampleResume(
@@ -351,6 +414,10 @@ class ResumeControllerDocs {
             .uri("/api/resume-core/resumes")
             .header(HttpHeaders.AUTHORIZATION, "Bearer test-token")
             .accept(MediaType.APPLICATION_JSON)
+            .attribute(
+                RestDocumentationGenerator.ATTRIBUTE_NAME_URL_TEMPLATE,
+                "/api/resume-core/resumes"
+            )
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -378,6 +445,8 @@ class ResumeControllerDocs {
                                 "[].userId" type STRING means "이력서 소유자 ID"
                                 "[].version" type NUMBER means "이력서 버전"
                                 "[].isActive" type BOOLEAN means "활성 이력서 여부"
+                                "[].createdAt" type STRING means "생성 일시 (ISO8601)"
+                                "[].updatedAt" type STRING means "수정 일시 (ISO8601)"
 
                                 "[].summary" type OBJECT means "이력서 요약"
                                 "[].summary.headline" type STRING means "한 줄 헤드라인"
@@ -464,6 +533,10 @@ class ResumeControllerDocs {
             .uri("/api/resume-core/resumes/{resumeId}", resumeId)
             .header(HttpHeaders.AUTHORIZATION, "Bearer test-token")
             .accept(MediaType.APPLICATION_JSON)
+            .attribute(
+                RestDocumentationGenerator.ATTRIBUTE_NAME_URL_TEMPLATE,
+                "/api/resume-core/resumes/{resumeId}"
+            )
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -491,6 +564,8 @@ class ResumeControllerDocs {
                                 "userId" type STRING means "이력서 소유자 ID"
                                 "version" type NUMBER means "이력서 버전"
                                 "isActive" type BOOLEAN means "활성 상태 여부"
+                                "createdAt" type STRING means "생성 일시 (ISO8601)"
+                                "updatedAt" type STRING means "수정 일시 (ISO8601)"
 
                                 "summary" type OBJECT means "이력서 요약"
                                 "summary.headline" type STRING means "한 줄 헤드라인"
@@ -573,6 +648,10 @@ class ResumeControllerDocs {
             .uri("/api/resume-core/resumes/active")
             .header(HttpHeaders.AUTHORIZATION, "Bearer test-token")
             .accept(MediaType.APPLICATION_JSON)
+            .attribute(
+                RestDocumentationGenerator.ATTRIBUTE_NAME_URL_TEMPLATE,
+                "/api/resume-core/resumes/active"
+            )
             .exchange()
             .expectStatus().isOk
             .expectBody()
@@ -600,6 +679,8 @@ class ResumeControllerDocs {
                                 "userId" type STRING means "이력서 소유자 ID"
                                 "version" type NUMBER means "이력서 버전"
                                 "isActive" type BOOLEAN means "활성 상태 (항상 true)"
+                                "createdAt" type STRING means "생성 일시 (ISO8601)"
+                                "updatedAt" type STRING means "수정 일시 (ISO8601)"
 
                                 "summary" type OBJECT means "이력서 요약"
                                 "summary.headline" type STRING means "한 줄 헤드라인"
@@ -666,6 +747,68 @@ class ResumeControllerDocs {
                                 "additional_info.target_position" type STRING optional true means "희망 직무"
                             }
                             .responseSchema(Schema("GetResumeResponse"))
+                            .build()
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `document download resume pdf`() {
+        val resumeId = UUID.fromString("12345678-1234-1234-1234-123456789abc")
+        val pdfBytes = "binary".toByteArray()
+        val pdfResult = ResumePdfResult(
+            fileName = "resume-modern.pdf",
+            bytes = pdfBytes
+        )
+
+        given(generateResumePdfUseCase.handle(org.mockito.kotlin.any())).willReturn(Mono.just(pdfResult))
+
+        webTestClient
+            .get()
+            .uri(
+                "/api/resume-core/resumes/{resumeId}/pdf?template={template}",
+                resumeId,
+                "modern"
+            )
+            .header(HttpHeaders.AUTHORIZATION, "Bearer test-token")
+            .accept(MediaType.APPLICATION_PDF)
+            .attribute(
+                RestDocumentationGenerator.ATTRIBUTE_NAME_URL_TEMPLATE,
+                "/api/resume-core/resumes/{resumeId}/pdf"
+            )
+            .exchange()
+            .expectStatus().isOk
+            .expectHeader().contentType(MediaType.APPLICATION_PDF)
+            .expectHeader()
+            .valueMatches(HttpHeaders.CONTENT_DISPOSITION, ".*${pdfResult.fileName}.*")
+            .expectBody(ByteArray::class.java)
+            .isEqualTo(pdfBytes)
+            .consumeWith(
+                document(
+                    "resume-download-pdf",
+                    Preprocessors.preprocessRequest(Preprocessors.prettyPrint()),
+                    Preprocessors.preprocessResponse(Preprocessors.removeHeaders(HttpHeaders.CONTENT_LENGTH)),
+                    resource(
+                        ResourceSnippetParameters.builder()
+                            .tag("Resumes")
+                            .summary("PDF 다운로드")
+                            .description(
+                                """
+                                저장된 이력서를 선택한 템플릿(기본, modern, minimalist)으로 렌더링해 PDF 파일로 내려줍니다.
+                                wkhtmltopdf 바이너리가 설치되어 있어야 하며, `template` 파라미터로 테마를 지정합니다.
+                                """.trimIndent()
+                            )
+                            .requestHeaders {
+                                HttpHeaders.AUTHORIZATION header "Keycloak 발급 Bearer 토큰" optional false
+                            }
+                            .requestParameters {
+                                "template" type STRING optional true means "적용할 템플릿 (default | modern | minimalist)"
+                            }
+                            .responseHeaders(*headers {
+                                HttpHeaders.CONTENT_TYPE header "항상 application/pdf"
+                                HttpHeaders.CONTENT_DISPOSITION header "첨부파일 다운로드용 Content-Disposition"
+                            })
                             .build()
                     )
                 )

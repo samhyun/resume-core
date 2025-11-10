@@ -1,0 +1,10 @@
+<section th:fragment="profile" class="section profile" xmlns:th="http://www.thymeleaf.org">
+    <h2>Profile</h2>
+    <ul>
+        <li th:each="line : ${resume.resumeData.summary.profile}" th:text="${line}">Profile line</li>
+    </ul>
+    <h3>Core Strengths</h3>
+    <div class="chip-list">
+        <span class="chip" th:each="strength : ${resume.resumeData.summary.coreStrengths}" th:text="${strength}">Strength</span>
+    </div>
+</section>

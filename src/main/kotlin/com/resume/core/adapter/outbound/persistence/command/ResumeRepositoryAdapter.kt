@@ -57,4 +57,8 @@ class ResumeRepositoryAdapter(
 
     override fun existsByIdAndUserId(resumeId: UUID, userId: String): Mono<Boolean> =
         repository.existsByIdAndUserId(resumeId, userId)
+
+    override fun deleteByIdAndUserId(resumeId: UUID, userId: String): Mono<Unit> =
+        repository.deleteByIdAndUserId(resumeId, userId)
+            .thenReturn(Unit)
 }

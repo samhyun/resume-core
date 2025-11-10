@@ -1,0 +1,6 @@
+<div th:fragment="footer" class="resume-footer" xmlns:th="http://www.thymeleaf.org">
+    <p>Generated with Resume Core &middot;
+        <span th:text="${templateName?.toUpperCase()} ?: 'DEFAULT'">DEFAULT</span>
+    </p>
+    <p th:text="${#temporals.format(generatedAt, 'yyyy-MM-dd HH:mm z')}" class="timestamp">2024-01-01 10:00 UTC</p>
+</div>

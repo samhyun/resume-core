@@ -69,3 +69,8 @@ spring:
 #      initial-size: 5
 #      max-idle-time: PT30S
 #      validation-query: SELECT 1
+
+resume:
+  pdf:
+    wkhtmltopdf-path: ${WKHTMLTOPDF_PATH:./scripts/wkhtmltopdf.sh} # 예: ./scripts/wkhtmltopdf.sh
+    timeout-seconds: ${WKHTML_TIMEOUT_SECONDS:30}
