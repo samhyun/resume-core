@@ -12,7 +12,6 @@ import com.resume.core.application.usecase.write.CreateChatSessionUseCase
 import com.resume.core.port.outbound.external.AiAgentStreamEvent
 import com.resume.core.support.docs.DocsFieldType.ENUM
 import com.resume.core.support.docs.DocsFieldType.STRING
-import com.resume.core.support.docs.headers
 import com.resume.core.support.docs.requestHeaders
 import com.resume.core.support.docs.requestFields
 import com.resume.core.support.docs.responseFields

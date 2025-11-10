@@ -15,5 +15,8 @@ fun ResourceSnippetParametersBuilder.requestHeaders(block: HeaderDsl.() -> Unit)
 fun ResourceSnippetParametersBuilder.requestParameters(block: ParameterDsl.() -> Unit): ResourceSnippetParametersBuilder =
     queryParameters(*parameters(block))
 
+fun ResourceSnippetParametersBuilder.pathParameters(block: ParameterDsl.() -> Unit): ResourceSnippetParametersBuilder =
+    pathParameters(*parameters(block))
+
 fun requestParts(block: PartDsl.() -> Unit): Array<RequestPartDescriptor> =
     parts(block)

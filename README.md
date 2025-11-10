@@ -57,9 +57,47 @@ docker compose -f docker/docker-compose.yml down -v
    docker run -p 8888:8080 \
      -e SWAGGER_JSON=/api/swagger.yaml \
      -v "$(pwd)/build/api-spec/resume-core.yaml:/api/swagger.yaml" \
-     swaggerapi/swagger-ui
-   ```
-   `http://localhost:8888` 접속 후 API 명세 확인.
+   swaggerapi/swagger-ui
+  ```
+  `http://localhost:8888` 접속 후 API 명세 확인.
+
+## PDF 템플릿 & 다운로드
+
+- 템플릿은 `Thymeleaf` 기반으로 아래 구조에서 관리됩니다.
+  ```
+  src/main/resources/templates
+  ├─ resume/
+  │  ├─ default.html
+  │  ├─ modern.html
+  │  └─ minimalist.html
+  └─ partials/
+     ├─ header.html
+     ├─ footer.html
+     ├─ profile.html
+     └─ experience.html
+  ```
+- API: `GET /api/resume-core/resumes/{resumeId}/pdf?template=modern`
+  - 기본 템플릿은 `default`, 존재하지 않는 값은 자동으로 기본 템플릿으로 대체됩니다.
+  - 응답은 `application/pdf` + `Content-Disposition: attachment` 헤더를 포함합니다.
+- 삭제 API: `DELETE /api/resume-core/resumes/{resumeId}` — JWT 사용자와 일치하는 이력서만 삭제되며, 성공 시 204(No Content)를 반환합니다.
+- 렌더링 파이프라인: `ResumeTemplateRendererPort` → Thymeleaf → wkhtmltopdf.
+  - wkhtmltopdf 바이너리 경로와 타임아웃은 `resume.pdf.wkhtmltopdf-path`, `resume.pdf.timeout-seconds` 혹은 환경 변수(`WKHTMLTOPDF_PATH`, `WKHTMLTOPDF_TIMEOUT_SECONDS`)로 조정합니다.
+- 로컬 개발 시 Docker Compose(동봉 Dockerfile 기반)로 wkhtmltopdf를 띄우는 방법:
+    1. `docker compose -f docker/docker-compose.yml up -d wkhtmltopdf` (최초 실행 시 `docker/wkhtmltopdf/Dockerfile`로 이미지를 빌드합니다)
+    2. `WKHTMLTOPDF_PATH=./scripts/wkhtmltopdf.sh ./gradlew bootRun`
+       - 스크립트는 컨테이너에 HTML을 복사하고 실행 결과를 다시 호스트로 돌려줍니다.
+  - 설치 방법 및 문제 해결은 [`docs/wkhtmltopdf.md`](docs/wkhtmltopdf.md)를 참고하세요.
+
+## Docker 이미지 빌드
+
+- `Dockerfile`은 Jenkins 등 외부에서 미리 빌드한 JAR(`build/libs/*.jar`)을 복사해 사용하는 단일 런타임 스테이지입니다. 컨테이너 안에는 wkhtmltopdf와 기본 폰트가 설치됩니다.
+- 빌드 & 실행 예시:
+  ```bash
+  ./gradlew bootJar   # 또는 CI에서 빌드
+  docker build -t resume-core .
+  docker run --rm -p 8081:8081 -e SPRING_PROFILES_ACTIVE=prod resume-core
+  ```
+- 기본 포트는 8081이며, `SERVER_PORT` 환경 변수로 덮어쓸 수 있습니다. JVM 옵션은 `JAVA_OPTS`로 전달하세요.
 
 ## 코딩 & 문서 컨벤션
 - Kotlin 공식 스타일(4 스페이스, 멀티라인에는 trailing comma, 120자 가이드라인).

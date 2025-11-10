@@ -1,0 +1,4 @@
+<div th:fragment="header" class="resume-header" xmlns:th="http://www.thymeleaf.org">
+    <h1 th:text="${resume.resumeData.summary.headline}">Headline</h1>
+    <p class="profile-line" th:each="line : ${resume.resumeData.summary.profile}" th:text="${line}">Profile line</p>
+</div>

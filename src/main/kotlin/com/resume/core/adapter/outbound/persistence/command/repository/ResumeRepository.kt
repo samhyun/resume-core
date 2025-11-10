@@ -60,4 +60,15 @@ interface ResumeRepository : ReactiveCrudRepository<ResumeEntity, UUID> {
      * Check if a resume exists for the given ID and user
      */
     fun existsByIdAndUserId(id: UUID, userId: String): Mono<Boolean>
+
+    /**
+     * Delete resume by id scoped to user to prevent accidental cross-user deletes
+     */
+    @Query(
+        """
+        DELETE FROM resume
+        WHERE id = :id AND user_id = :userId
+        """
+    )
+    fun deleteByIdAndUserId(id: UUID, userId: String): Mono<Void>
 }
