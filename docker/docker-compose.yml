@@ -1,16 +1,4 @@
 services:
-  postgres:
-    image: postgres:16
-    container_name: pg-main
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./db/init:/docker-entrypoint-initdb.d  # 아래 init 스크립트 자동 실행
-
   wkhtmltopdf:
     build:
       context: ../
@@ -19,5 +7,12 @@ services:
     container_name: wkhtmltopdf-cli
     entrypoint: ["/bin/sh", "-c", "sleep infinity"]
     restart: unless-stopped
+    networks:
+      - local-net
+
 volumes:
   pgdata:
+
+networks:
+  local-net:
+    external: true
