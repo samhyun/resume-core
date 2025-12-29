@@ -30,7 +30,7 @@ class StreamChatSessionUseCaseService(
                 Mono.error(
                     ResponseStatusException(
                         HttpStatus.NOT_FOUND,
-                        "Chat session ${'$'}{command.sessionId} not found"
+                        "Chat session ${command.sessionId} not found"
                     )
                 )
             )

@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="${resume.resumeData.summary.headline}">Resume</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --bg: #fafafa;
+            --card-bg: #ffffff;
+            --primary: #334155;
+            --primary-light: #475569;
+            --primary-dark: #1e293b;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --text-subtle: #94a3b8;
+            --border: #e2e8f0;
+            --border-subtle: #f1f5f9;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --shadow: rgba(15, 23, 42, 0.06);
+            --shadow-strong: rgba(15, 23, 42, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            margin: 0;
+            padding: 48px 32px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            line-height: 1.7;
+            font-size: 14.5px;
+            letter-spacing: -0.01em;
+            font-weight: 400;
+        }
+
+        .page {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 64px;
+            box-shadow: 0 20px 50px var(--shadow), 0 4px 16px rgba(15, 23, 42, 0.04);
+            border: 1px solid var(--border-subtle);
+        }
+
+        @media print {
+            body {
+                padding: 0;
+                background: white;
+            }
+            .page {
+                box-shadow: none;
+                border-radius: 0;
+                border: none;
+                padding: 40px;
+                max-width: 100%;
+            }
+            .section, .card, .experience-item, .timeline-item {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+        }
+
+        header.resume-hero {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            padding: 40px 44px;
+            margin: 0 -12px 48px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(168, 85, 247, 0.05));
+            border: 1px solid rgba(99, 102, 241, 0.1);
+        }
+
+        header.resume-hero h1 {
+            font-size: 48px;
+            margin: 0;
+            font-weight: 800;
+            color: var(--primary-dark);
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            font-family: 'Inter', sans-serif;
+        }
+
+        header.resume-hero .profile-line {
+            margin: 2px 0;
+            color: var(--text-muted);
+            font-size: 15.5px;
+            line-height: 1.7;
+            font-weight: 400;
+        }
+
+        .pill-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .pill {
+            padding: 8px 20px;
+            border-radius: 999px;
+            background: rgba(99, 102, 241, 0.08);
+            color: var(--primary-dark);
+            font-size: 13.5px;
+            font-weight: 600;
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            letter-spacing: -0.01em;
+        }
+
+        main {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 48px;
+        }
+
+        @media print {
+            main {
+                gap: 36px;
+            }
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            font-size: 13px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-subtle);
+            margin-bottom: 24px;
+            font-weight: 700;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 12px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .card {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 250, 250, 0.95));
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 24px 28px;
+            margin-bottom: 20px;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @media screen {
+            .card:hover {
+                box-shadow: 0 12px 28px var(--shadow), 0 4px 12px rgba(15, 23, 42, 0.06);
+                transform: translateY(-3px);
+                border-color: rgba(99, 102, 241, 0.2);
+            }
+        }
+
+        .experience-item {
+            page-break-inside: auto;
+            break-inside: avoid;
+        }
+
+        .experience-item + .experience-item {
+            margin-top: 28px;
+            padding-top: 28px;
+            border-top: 1px solid var(--border);
+        }
+
+        .experience-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+            margin-bottom: 14px;
+        }
+
+        .experience-head h3 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.35;
+            letter-spacing: -0.02em;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .experience-head span {
+            font-size: 13px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        ul.list {
+            margin: 14px 0 0;
+            padding-left: 24px;
+        }
+
+        ul.list li {
+            margin-bottom: 8px;
+            line-height: 1.7;
+            color: var(--text-main);
+        }
+
+        ul.list li::marker {
+            color: var(--accent);
+        }
+
+        .skills-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 22px;
+        }
+
+        .skill-category {
+            page-break-inside: avoid;
+        }
+
+        .skill-label {
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .badge-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .badge {
+            background: var(--border-subtle);
+            color: var(--text-main);
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 12.5px;
+            font-weight: 500;
+            border: 1px solid var(--border);
+            letter-spacing: -0.01em;
+            transition: all 0.2s;
+        }
+
+        @media screen {
+            .badge:hover {
+                background: rgba(99, 102, 241, 0.08);
+                border-color: rgba(99, 102, 241, 0.2);
+                color: var(--primary-dark);
+            }
+        }
+
+        .timeline-item {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .timeline-item + .timeline-item {
+            margin-top: 22px;
+            padding-top: 22px;
+            border-top: 1px solid var(--border);
+        }
+
+        .project-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        }
+
+        .project-group {
+            margin-top: 18px;
+        }
+
+        .project {
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 1px dashed var(--border);
+            page-break-inside: avoid;
+        }
+
+        .project:first-child {
+            border-top: none;
+            padding-top: 0;
+        }
+
+        .text-muted {
+            color: var(--text-muted);
+        }
+
+        strong {
+            font-weight: 600;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+        }
+
+        p {
+            margin: 10px 0;
+            line-height: 1.75;
+        }
+
+        .resume-footer {
+            margin-top: 48px;
+            padding-top: 28px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-subtle);
+            letter-spacing: 0.01em;
+        }
+
+        .section:empty,
+        .skills-grid:empty,
+        .pill-row:empty {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header class="resume-hero">
+        <h1 th:text="${resume.resumeData.summary.headline}">백엔드 개발자</h1>
+        <p class="profile-line" th:each="line : ${resume.resumeData.summary.profile}" th:text="${line}">프로필</p>
+        <div class="pill-row" th:if="${resume.resumeData.summary.coreStrengths != null}">
+            <span class="pill" th:each="pill : ${resume.resumeData.summary.coreStrengths}" th:text="${pill}">Strength</span>
+        </div>
+    </header>
+
+    <main>
+        <aside>
+            <section class="section" th:if="${resume.resumeData.skills != null}">
+                <h2>Skills & Tools</h2>
+                <div class="badge-list">
+                    <span class="badge" th:if="${resume.resumeData.skills.programming != null}" th:each="skill : ${resume.resumeData.skills.programming}" th:text="${skill}">Kotlin</span>
+                    <span class="badge" th:if="${resume.resumeData.skills.frameworks != null}" th:each="skill : ${resume.resumeData.skills.frameworks}" th:text="${skill}">Spring</span>
+                    <span class="badge" th:if="${resume.resumeData.skills.databases != null}" th:each="skill : ${resume.resumeData.skills.databases}" th:text="${skill}">Postgres</span>
+                    <span class="badge" th:if="${resume.resumeData.skills.tools != null}" th:each="skill : ${resume.resumeData.skills.tools}" th:text="${skill}">Docker</span>
+                    <span class="badge" th:if="${resume.resumeData.skills.cloud != null}" th:each="skill : ${resume.resumeData.skills.cloud}" th:text="${skill}">AWS</span>
+                    <span class="badge" th:if="${resume.resumeData.skills.languages != null}" th:each="skill : ${resume.resumeData.skills.languages}" th:text="${skill}">English</span>
+                </div>
+            </section>
+
+            <section class="section" th:if="${resume.resumeData.education != null && !#lists.isEmpty(resume.resumeData.education)}">
+                <h2>Education</h2>
+                <div class="timeline-item" th:each="edu : ${resume.resumeData.education}">
+                    <strong th:text="${edu.institution}">University</strong>
+                    <div class="project-meta">
+                        <span th:text="${edu.degree + ' · ' + edu.major}">Degree</span>
+                        <span th:text="${edu.graduationYear}">2012</span>
+                    </div>
+                    <p th:if="${edu.gpa != null && edu.gpa != ''}" th:text="${'GPA ' + edu.gpa}">GPA 4.2</p>
+                    <ul class="list" th:if="${edu.achievements != null && !#lists.isEmpty(edu.achievements)}">
+                        <li th:each="achievement : ${edu.achievements}" th:text="${achievement}">Dean's list</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="section" th:if="${resume.resumeData.additionalInfo != null}">
+                <h2>Highlights</h2>
+                <div class="card" th:if="${resume.resumeData.additionalInfo.targetPosition != null && resume.resumeData.additionalInfo.targetPosition != ''">
+                    <strong>Target Position</strong>
+                    <p th:text="${resume.resumeData.additionalInfo.targetPosition}">Senior Backend Engineer</p>
+                </div>
+                <div class="card" th:if="${resume.resumeData.additionalInfo.publications != null && !#lists.isEmpty(resume.resumeData.additionalInfo.publications)}">
+                    <strong>Publications</strong>
+                    <ul class="list">
+                        <li th:each="pub : ${resume.resumeData.additionalInfo.publications}" th:text="${pub}">Publication</li>
+                    </ul>
+                </div>
+                <div class="card" th:if="${resume.resumeData.additionalInfo.patents != null && !#lists.isEmpty(resume.resumeData.additionalInfo.patents)}">
+                    <strong>Patents</strong>
+                    <ul class="list">
+                        <li th:each="patent : ${resume.resumeData.additionalInfo.patents}" th:text="${patent}">Patent</li>
+                    </ul>
+                </div>
+                <div class="card" th:if="${resume.resumeData.additionalInfo.speakingActivities != null && !#lists.isEmpty(resume.resumeData.additionalInfo.speakingActivities)}">
+                    <strong>Speaking</strong>
+                    <ul class="list">
+                        <li th:each="talk : ${resume.resumeData.additionalInfo.speakingActivities}" th:text="${talk}">Talk</li>
+                    </ul>
+                </div>
+            </section>
+        </aside>
+
+        <section>
+            <div class="section">
+                <h2>Experience</h2>
+                <div class="card experience-item" th:each="exp : ${resume.resumeData.experience}">
+                    <div class="experience-head">
+                        <h3 th:text="${exp.position + ' · ' + exp.company}">Role · Company</h3>
+                        <span th:text="${exp.duration}">2021 - Present</span>
+                    </div>
+                    <p th:text="${exp.summary}">Summary</p>
+                    <div th:if="${exp.projects != null && !exp.projects.isEmpty()}" class="project-group">
+                        <div class="project" th:each="project : ${exp.projects}">
+                            <div class="project-meta">
+                                <strong th:text="${project.name}">Project</strong>
+                                <span th:text="${project.period}">2023</span>
+                            </div>
+                            <p class="text-muted" th:text="${project.challenge}">Challenge</p>
+                            <ul class="list">
+                                <li th:each="action : ${project.actions}" th:text="${action}">Action</li>
+                            </ul>
+                            <ul class="list" th:if="${project.results != null}">
+                                <li th:each="result : ${project.results}" th:text="${result}">Result</li>
+                            </ul>
+                            <p class="text-muted" th:text="${'Stack: ' + #strings.listJoin(project.technologies, ', ')}">Stack</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" th:if="${resume.resumeData.projects != null && !#lists.isEmpty(resume.resumeData.projects)}">
+                <h2>Independent Projects</h2>
+                <div class="card" th:each="project : ${resume.resumeData.projects}">
+                    <div class="project-meta">
+                        <strong th:text="${project.name}">Project</strong>
+                        <span th:text="${project.period}">2022</span>
+                    </div>
+                    <p th:if="${project.description != null && project.description != ''}" th:text="${project.description}">Description</p>
+                    <ul class="list" th:if="${project.details != null && !#lists.isEmpty(project.details)}">
+                        <li th:each="detail : ${project.details}" th:text="${detail}">Detail</li>
+                    </ul>
+                    <p class="text-muted" th:if="${project.technologies != null && !#lists.isEmpty(project.technologies)}" th:text="${'Stack: ' + #strings.listJoin(project.technologies, ', ')}">Stack</p>
+                </div>
+            </div>
+
+            <div class="section" th:if="${resume.resumeData.certificationsAwards != null && !#lists.isEmpty(resume.resumeData.certificationsAwards)}">
+                <h2>Certifications & Awards</h2>
+                <div class="card" th:each="cert : ${resume.resumeData.certificationsAwards}">
+                    <div class="project-meta">
+                        <strong th:text="${cert.name}">Certification</strong>
+                        <span th:text="${cert.date}">2021</span>
+                    </div>
+                    <p class="text-muted" th:if="${cert.issuer != null && cert.issuer != ''}" th:text="${cert.issuer}">Issuer</p>
+                    <p th:if="${cert.expiry != null && cert.expiry != ''}" th:text="${'Valid until ' + cert.expiry}">Expiry</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div class="resume-footer">
+        <p>Generated with Resume Core · <span th:text="${#temporals.format(generatedAt, 'yyyy-MM-dd HH:mm')}"/> · Template: <span th:text="${templateName}"></span></p>
+    </div>
+</div>
+</body>
+</html>

@@ -6,6 +6,7 @@ import com.resume.core.application.dto.write.SaveResumeResult
 import com.resume.core.application.dto.write.UpdateResumeCommand
 import com.resume.core.application.dto.write.UpdateResumeResult
 import com.resume.core.domain.model.*
+import java.time.LocalDateTime
 import java.util.UUID
 
 /**
@@ -101,7 +102,9 @@ data class GetResumeResponse(
     @param:JsonProperty("additional_info")
     val additionalInfo: AdditionalInfoDto? = null,
     val version: Int,
-    val isActive: Boolean
+    val isActive: Boolean,
+    val createdAt: LocalDateTime,
+    val updatedAt: LocalDateTime
 ) {
     companion object {
         fun from(resume: Resume): GetResumeResponse =
@@ -116,7 +119,9 @@ data class GetResumeResponse(
                 certificationsAwards = resume.resumeData.certificationsAwards?.map { CertificationAwardDto.from(it) },
                 additionalInfo = resume.resumeData.additionalInfo?.let { AdditionalInfoDto.from(it) },
                 version = resume.version,
-                isActive = resume.isActive
+                isActive = resume.isActive,
+                createdAt = resume.createdAt,
+                updatedAt = resume.updatedAt
             )
     }
 }

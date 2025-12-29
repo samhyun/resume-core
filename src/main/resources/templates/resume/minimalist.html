@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="${resume.resumeData.summary.headline + ' · Minimalist'}">Resume</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --bg: #f8f9fa;
+            --paper: #ffffff;
+            --text-main: #1a1a1a;
+            --text-muted: #525252;
+            --text-subtle: #a3a3a3;
+            --border: #e5e5e5;
+            --border-dark: #d4d4d4;
+            --accent: #2563eb;
+            --accent-light: #60a5fa;
+            --page-shadow: rgba(0, 0, 0, 0.05);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 60px 40px;
+            background: var(--bg);
+            color: var(--text-main);
+            line-height: 1.7;
+            font-size: 14.5px;
+            letter-spacing: -0.01em;
+            font-weight: 400;
+        }
+
+        .page {
+            max-width: 850px;
+            margin: 0 auto;
+            background: var(--paper);
+            padding: 72px 64px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px var(--page-shadow), 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+
+        /* Print-specific styles for PDF generation */
+        @media print {
+            body {
+                padding: 0;
+                background: white;
+            }
+            .page {
+                padding: 48px;
+                box-shadow: none;
+                border-radius: 0;
+                max-width: 100%;
+            }
+            .section, .experience-item, .timeline-item, .grid-item {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+        }
+
+        header.resume-header {
+            margin-bottom: 56px;
+            padding-bottom: 32px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        header.resume-header h1 {
+            font-size: 40px;
+            margin-bottom: 20px;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+            color: var(--text-main);
+        }
+
+        .profile-line {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin: 8px 0;
+            font-weight: 400;
+            line-height: 1.65;
+        }
+
+        .section {
+            margin-bottom: 52px;
+            page-break-inside: avoid;
+        }
+
+        .section h2 {
+            margin-bottom: 28px;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-subtle);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 40px 32px;
+        }
+
+        .grid-item {
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .experience-item {
+            padding-bottom: 32px;
+            margin-bottom: 32px;
+            border-bottom: 1px solid var(--border);
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .experience-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 0;
+        }
+
+        .experience-item h3 {
+            margin: 0 0 10px 0;
+            font-size: 19px;
+            font-weight: 600;
+            line-height: 1.4;
+            letter-spacing: -0.01em;
+        }
+
+        .duration {
+            font-size: 12px;
+            letter-spacing: 0.02em;
+            color: var(--text-subtle);
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        ul {
+            padding-left: 22px;
+            margin: 14px 0;
+        }
+
+        ul li {
+            margin-bottom: 8px;
+            line-height: 1.65;
+            color: var(--text-main);
+        }
+
+        ul li::marker {
+            color: var(--accent);
+        }
+
+        .mono {
+            font-family: 'Inter', 'Noto Sans KR', monospace;
+            font-size: 13px;
+            letter-spacing: 0.01em;
+            color: var(--text-muted);
+            line-height: 1.7;
+            font-weight: 400;
+        }
+
+        .skill-group {
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+
+        .skill-group strong {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-subtle);
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .project-group {
+            margin-top: 20px;
+        }
+
+        .project {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            page-break-inside: avoid;
+        }
+
+        .project:first-child {
+            border-top: none;
+            padding-top: 0;
+            margin-top: 0;
+        }
+
+        .project strong {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .resume-footer {
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-subtle);
+            margin-top: 64px;
+            padding-top: 32px;
+            border-top: 1px solid var(--border);
+        }
+
+        p {
+            margin: 10px 0;
+            color: var(--text-main);
+        }
+
+        strong {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        /* Hide empty sections */
+        .section:empty,
+        .grid:empty,
+        .profile-section:empty {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header class="resume-header">
+        <h1 th:text="${resume.resumeData.summary.headline}">백엔드 개발자</h1>
+        <div th:if="${resume.resumeData.summary.profile != null && !#lists.isEmpty(resume.resumeData.summary.profile)}">
+            <p class="profile-line" th:each="line : ${resume.resumeData.summary.profile}" th:text="${line}">Profile line</p>
+        </div>
+    </header>
+
+    <section class="section" th:if="${resume.resumeData.summary.coreStrengths != null && !#lists.isEmpty(resume.resumeData.summary.coreStrengths)}">
+        <h2>Overview</h2>
+        <div class="grid">
+            <div>
+                <p class="mono" th:each="strength : ${resume.resumeData.summary.coreStrengths}" th:text="${strength}">Strength</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" th:if="${resume.resumeData.experience != null && !#lists.isEmpty(resume.resumeData.experience)}">
+        <h2>Experience</h2>
+        <div class="experience-item" th:each="exp : ${resume.resumeData.experience}">
+            <div class="duration" th:text="${exp.duration}">2020-2024</div>
+            <h3 th:text="${exp.position + ' / ' + exp.company}">Role / Company</h3>
+            <p th:if="${exp.summary != null && exp.summary != ''}" th:text="${exp.summary}">Summary</p>
+            <div th:if="${exp.projects != null && !#lists.isEmpty(exp.projects)}" class="project-group">
+                <div class="project" th:each="project : ${exp.projects}">
+                    <strong th:text="${project.name + ' (' + project.period + ')'}">Project (2023)</strong>
+                    <p th:if="${project.challenge != null && project.challenge != ''}" th:text="${project.challenge}">Challenge</p>
+                    <ul th:if="${project.actions != null && !#lists.isEmpty(project.actions)}">
+                        <li th:each="action : ${project.actions}" th:text="${action}">Action</li>
+                    </ul>
+                    <ul th:if="${project.results != null && !#lists.isEmpty(project.results)}">
+                        <li th:each="result : ${project.results}" th:text="${result}">Result</li>
+                    </ul>
+                    <p class="mono" th:if="${project.technologies != null && !#lists.isEmpty(project.technologies)}" th:text="${#strings.listJoin(project.technologies, ' · ')}">Stack</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" th:if="${resume.resumeData.skills != null}">
+        <h2>Skills & Tools</h2>
+        <p class="mono">
+            <span th:if="${resume.resumeData.skills.programming != null}" th:each="skill, iterStat : ${resume.resumeData.skills.programming}">
+                <span th:text="${skill}">Kotlin</span><span th:if="${!iterStat.last}"> · </span>
+            </span>
+            <span th:if="${resume.resumeData.skills.frameworks != null}" th:each="skill, iterStat : ${resume.resumeData.skills.frameworks}">
+                <span th:if="${iterStat.first && resume.resumeData.skills.programming != null}"> · </span><span th:text="${skill}">Spring</span><span th:if="${!iterStat.last}"> · </span>
+            </span>
+            <span th:if="${resume.resumeData.skills.databases != null}" th:each="skill, iterStat : ${resume.resumeData.skills.databases}">
+                <span th:if="${iterStat.first && (resume.resumeData.skills.programming != null || resume.resumeData.skills.frameworks != null)}"> · </span><span th:text="${skill}">Postgres</span><span th:if="${!iterStat.last}"> · </span>
+            </span>
+            <span th:if="${resume.resumeData.skills.tools != null}" th:each="skill, iterStat : ${resume.resumeData.skills.tools}">
+                <span th:if="${iterStat.first && (resume.resumeData.skills.programming != null || resume.resumeData.skills.frameworks != null || resume.resumeData.skills.databases != null)}"> · </span><span th:text="${skill}">Docker</span><span th:if="${!iterStat.last}"> · </span>
+            </span>
+            <span th:if="${resume.resumeData.skills.cloud != null}" th:each="skill, iterStat : ${resume.resumeData.skills.cloud}">
+                <span th:if="${iterStat.first && (resume.resumeData.skills.programming != null || resume.resumeData.skills.frameworks != null || resume.resumeData.skills.databases != null || resume.resumeData.skills.tools != null)}"> · </span><span th:text="${skill}">AWS</span><span th:if="${!iterStat.last}"> · </span>
+            </span>
+            <span th:if="${resume.resumeData.skills.languages != null}" th:each="skill, iterStat : ${resume.resumeData.skills.languages}">
+                <span th:if="${iterStat.first && (resume.resumeData.skills.programming != null || resume.resumeData.skills.frameworks != null || resume.resumeData.skills.databases != null || resume.resumeData.skills.tools != null || resume.resumeData.skills.cloud != null)}"> · </span><span th:text="${skill}">English</span><span th:if="${!iterStat.last}"> · </span>
+            </span>
+        </p>
+    </section>
+
+    <section class="section" th:if="${resume.resumeData.projects != null && !#lists.isEmpty(resume.resumeData.projects)}">
+        <h2>Independent Projects</h2>
+        <div class="grid">
+            <div class="grid-item" th:each="project : ${resume.resumeData.projects}">
+                <div class="duration" th:text="${project.period}">2023</div>
+                <h3 th:text="${project.name}">Project</h3>
+                <p th:if="${project.description != null && project.description != ''}" th:text="${project.description}">Description</p>
+                <ul th:if="${project.details != null && !#lists.isEmpty(project.details)}">
+                    <li th:each="detail : ${project.details}" th:text="${detail}">Detail</li>
+                </ul>
+                <p class="mono" th:if="${project.technologies != null && !#lists.isEmpty(project.technologies)}" th:text="${#strings.listJoin(project.technologies, ' · ')}">Stack</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" th:if="${resume.resumeData.education != null && !#lists.isEmpty(resume.resumeData.education)}">
+        <h2>Education</h2>
+        <div class="grid">
+            <div class="grid-item" th:each="edu : ${resume.resumeData.education}">
+                <div class="duration" th:text="${edu.degree + ' · ' + edu.major}">Degree</div>
+                <h3 th:text="${edu.institution}">Institution</h3>
+                <p class="mono" th:text="${edu.graduationYear}">2012</p>
+                <p th:if="${edu.gpa != null && edu.gpa != ''}" style="font-size: 12px; color: var(--text-muted);" th:text="${'GPA ' + edu.gpa}">GPA 4.2</p>
+                <ul th:if="${edu.achievements != null && !#lists.isEmpty(edu.achievements)}">
+                    <li th:each="achievement : ${edu.achievements}" th:text="${achievement}">Achievement</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" th:if="${resume.resumeData.certificationsAwards != null && !#lists.isEmpty(resume.resumeData.certificationsAwards)}">
+        <h2>Certifications & Awards</h2>
+        <div class="grid">
+            <div class="grid-item" th:each="cert : ${resume.resumeData.certificationsAwards}">
+                <div class="duration" th:text="${cert.date}">2023</div>
+                <strong th:text="${cert.name}">Certification</strong>
+                <p th:if="${cert.issuer != null && cert.issuer != ''}" class="mono" th:text="${cert.issuer}">Issuer</p>
+                <p th:if="${cert.expiry != null && cert.expiry != ''}" style="font-size: 11px; color: var(--text-subtle);" th:text="${'Valid until ' + cert.expiry}">Expiry</p>
+            </div>
+        </div>
+    </section>
+
+    <div class="resume-footer">
+        <p>Generated with Resume Core · <span th:text="${#temporals.format(generatedAt, 'yyyy-MM-dd HH:mm')}"/> · Template: <span th:text="${templateName}"></span></p>
+    </div>
+</div>
+</body>
+</html>

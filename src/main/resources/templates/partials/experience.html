@@ -1,0 +1,27 @@
+<section th:fragment="experience" class="section experience" xmlns:th="http://www.thymeleaf.org">
+    <h2>Experience</h2>
+    <article class="experience-item" th:each="exp : ${resume.resumeData.experience}">
+        <header>
+            <h3 th:text="${exp.position + ' · ' + exp.company}">Role @ Company</h3>
+            <span class="duration" th:text="${exp.duration}">2020-2024</span>
+        </header>
+        <p th:text="${exp.summary}">Summary</p>
+        <div class="projects" th:if="${exp.projects != null and !exp.projects.isEmpty()}">
+            <h4>Key Projects</h4>
+            <div class="project" th:each="project : ${exp.projects}">
+                <div class="project-header">
+                    <span class="project-name" th:text="${project.name}">Project Name</span>
+                    <span class="project-period" th:text="${project.period}">2023</span>
+                </div>
+                <p class="challenge" th:text="${project.challenge}">Challenge</p>
+                <ul class="actions">
+                    <li th:each="action : ${project.actions}" th:text="${action}">Action</li>
+                </ul>
+                <ul class="results">
+                    <li th:each="result : ${project.results}" th:text="${result}">Result</li>
+                </ul>
+                <p class="tech" th:text="${'Stack: ' + #strings.listJoin(project.technologies, ', ')}">Stack</p>
+            </div>
+        </div>
+    </article>
+</section>
