@@ -42,3 +42,6 @@ out/
 AGENTS.md
 .claude
 CLAUDE.md
+
+### Apidog ###
+.apidog.json

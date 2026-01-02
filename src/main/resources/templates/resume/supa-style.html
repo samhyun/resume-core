@@ -420,10 +420,16 @@
 <body>
 <div class="page">
     <header class="resume-header">
-        <h1 th:text="${resume.resumeData.summary.headline}">Backend Developer</h1>
+        <h1 th:text="${resume.resumeData.name != null && resume.resumeData.name != '' ? resume.resumeData.name : resume.resumeData.summary.headline}">Backend Developer</h1>
+        <div class="job-title"
+             th:if="${resume.resumeData.name != null && resume.resumeData.name != '' && resume.resumeData.summary.headline != null && resume.resumeData.summary.headline != ''}"
+             th:text="${resume.resumeData.summary.headline}">Headline</div>
         <div class="job-title" th:if="${resume.resumeData.additionalInfo != null && resume.resumeData.additionalInfo.targetPosition != null && resume.resumeData.additionalInfo.targetPosition != ''}" th:text="${resume.resumeData.additionalInfo.targetPosition}">Senior Software Engineer</div>
 
-        <div class="contact-info" th:if="${resume.resumeData.summary.profile != null && !#lists.isEmpty(resume.resumeData.summary.profile)}">
+        <div class="contact-info" th:if="${resume.resumeData.email != null || resume.resumeData.phone != null || resume.resumeData.address != null || (resume.resumeData.summary.profile != null && !#lists.isEmpty(resume.resumeData.summary.profile))}">
+            <div class="contact-item" th:if="${resume.resumeData.email != null && resume.resumeData.email != ''}" th:text="${resume.resumeData.email}">email@example.com</div>
+            <div class="contact-item" th:if="${resume.resumeData.phone != null && resume.resumeData.phone != ''}" th:text="${resume.resumeData.phone}">000-0000-0000</div>
+            <div class="contact-item" th:if="${resume.resumeData.address != null && resume.resumeData.address != ''}" th:text="${resume.resumeData.address}">Address</div>
             <div class="contact-item" th:each="line : ${resume.resumeData.summary.profile}" th:text="${line}">Contact info</div>
         </div>
 
@@ -459,6 +465,7 @@
                     <div class="project-item" th:each="project : ${exp.projects}">
                         <div class="project-name" th:text="${project.name}">Project Name</div>
                         <div class="project-challenge" th:if="${project.challenge != null && project.challenge != ''}" th:text="${project.challenge}">Challenge description</div>
+                        <div class="project-challenge" th:if="${project.description != null && project.description != ''}" th:text="${project.description}">Description</div>
 
                         <ul class="project-list" th:if="${project.actions != null && !#lists.isEmpty(project.actions)}">
                             <li th:each="action : ${project.actions}" th:text="${action}">Action item</li>
@@ -467,6 +474,8 @@
                         <ul class="project-list" th:if="${project.results != null && !#lists.isEmpty(project.results)}">
                             <li th:each="result : ${project.results}" th:text="${result}">Result item</li>
                         </ul>
+
+                        <div class="project-challenge" th:if="${project.achievements != null && project.achievements != ''}" th:text="${project.achievements}">Achievements</div>
 
                         <div class="tech-stack" th:if="${project.technologies != null && !#lists.isEmpty(project.technologies)}">
                             <span class="tech-tag" th:each="tech : ${project.technologies}" th:text="${tech}">Tech</span>
@@ -490,6 +499,8 @@
                 <span class="skill-item" th:if="${resume.resumeData.skills.tools != null}" th:each="skill : ${resume.resumeData.skills.tools}" th:text="${skill}">Docker</span>
                 <span class="skill-item" th:if="${resume.resumeData.skills.cloud != null}" th:each="skill : ${resume.resumeData.skills.cloud}" th:text="${skill}">AWS</span>
                 <span class="skill-item" th:if="${resume.resumeData.skills.languages != null}" th:each="skill : ${resume.resumeData.skills.languages}" th:text="${skill}">English</span>
+                <span class="skill-item" th:if="${resume.resumeData.skills.softSkills != null}" th:each="skill : ${resume.resumeData.skills.softSkills}" th:text="${skill}">Soft</span>
+                <span class="skill-item" th:if="${resume.resumeData.skills.spokenLanguages != null}" th:each="entry : ${resume.resumeData.skills.spokenLanguages.entrySet()}" th:text="${entry.key + ' (' + entry.value + ')'}">Lang</span>
             </div>
         </section>
 
@@ -514,13 +525,15 @@
         </section>
 
         <!-- Independent Projects Section -->
-        <section class="section" th:if="${resume.resumeData.projects != null && !#lists.isEmpty(resume.resumeData.projects)}">
+        <section class="section"
+                 th:with="projectList=${!#lists.isEmpty(resume.resumeData.projects) ? resume.resumeData.projects : resume.resumeData.personalProjects}"
+                 th:if="${projectList != null && !#lists.isEmpty(projectList)}">
             <div class="section-header">
                 <span class="section-bullet"></span>
                 <h2 class="section-title">Independent Projects</h2>
             </div>
 
-            <div class="experience-card" th:each="project : ${resume.resumeData.projects}">
+            <div class="experience-card" th:each="project : ${projectList}">
                 <div class="experience-header">
                     <div class="experience-title">
                         <h3 th:text="${project.name}">Project Name</h3>
@@ -540,18 +553,28 @@
         </section>
 
         <!-- Certifications & Awards Section -->
-        <section class="section" th:if="${resume.resumeData.certificationsAwards != null && !#lists.isEmpty(resume.resumeData.certificationsAwards)}">
+        <section class="section"
+                 th:with="certList=${resume.resumeData.certificationsAwards}, awardList=${resume.resumeData.awards}"
+                 th:if="${(certList != null && !#lists.isEmpty(certList)) || (awardList != null && !#lists.isEmpty(awardList))}">
             <div class="section-header">
                 <span class="section-bullet"></span>
                 <h2 class="section-title">Certifications & Awards</h2>
             </div>
 
-            <div class="education-card" th:each="cert : ${resume.resumeData.certificationsAwards}">
+            <div class="education-card" th:each="cert : ${certList}">
                 <h3 th:text="${cert.name}">Certification Name</h3>
                 <div class="degree-info" th:if="${cert.issuer != null && cert.issuer != ''}" th:text="${cert.issuer}">Issuer</div>
                 <div class="education-meta">
                     <span th:text="${cert.date}">2023</span>
                     <span th:if="${cert.expiry != null && cert.expiry != ''}" th:text="${'Valid until: ' + cert.expiry}">Expiry</span>
+                </div>
+            </div>
+            <div class="education-card" th:each="award : ${awardList}">
+                <h3 th:text="${award.title}">Award Title</h3>
+                <div class="degree-info" th:if="${award.organization != null && award.organization != ''}" th:text="${award.organization}">Organization</div>
+                <div class="education-meta">
+                    <span th:text="${award.date}">2023</span>
+                    <span th:if="${award.description != null && award.description != ''}" th:text="${award.description}">Description</span>
                 </div>
             </div>
         </section>

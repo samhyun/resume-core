@@ -231,7 +231,15 @@
 <body>
 <div class="page">
     <header class="resume-header">
-        <h1 th:text="${resume.resumeData.summary.headline}">백엔드 개발자</h1>
+        <h1 th:text="${resume.resumeData.name != null && resume.resumeData.name != '' ? resume.resumeData.name : resume.resumeData.summary.headline}">백엔드 개발자</h1>
+        <p class="profile-line"
+           th:if="${resume.resumeData.name != null && resume.resumeData.name != '' && resume.resumeData.summary.headline != null && resume.resumeData.summary.headline != ''}"
+           th:text="${resume.resumeData.summary.headline}">Headline</p>
+        <div th:if="${resume.resumeData.email != null || resume.resumeData.phone != null || resume.resumeData.address != null}">
+            <p class="profile-line" th:if="${resume.resumeData.email != null && resume.resumeData.email != ''}" th:text="${resume.resumeData.email}">email@example.com</p>
+            <p class="profile-line" th:if="${resume.resumeData.phone != null && resume.resumeData.phone != ''}" th:text="${resume.resumeData.phone}">000-0000-0000</p>
+            <p class="profile-line" th:if="${resume.resumeData.address != null && resume.resumeData.address != ''}" th:text="${resume.resumeData.address}">Address</p>
+        </div>
         <div th:if="${resume.resumeData.summary.profile != null && !#lists.isEmpty(resume.resumeData.summary.profile)}">
             <p class="profile-line" th:each="line : ${resume.resumeData.summary.profile}" th:text="${line}">Profile line</p>
         </div>
@@ -254,14 +262,16 @@
             <p th:if="${exp.summary != null && exp.summary != ''}" th:text="${exp.summary}">Summary</p>
             <div th:if="${exp.projects != null && !#lists.isEmpty(exp.projects)}" class="project-group">
                 <div class="project" th:each="project : ${exp.projects}">
-                    <strong th:text="${project.name + ' (' + project.period + ')'}">Project (2023)</strong>
+                    <strong th:text="${project.name + (project.period != null ? ' (' + project.period + ')' : '')}">Project (2023)</strong>
                     <p th:if="${project.challenge != null && project.challenge != ''}" th:text="${project.challenge}">Challenge</p>
+                    <p th:if="${project.description != null && project.description != ''}" th:text="${project.description}">Description</p>
                     <ul th:if="${project.actions != null && !#lists.isEmpty(project.actions)}">
                         <li th:each="action : ${project.actions}" th:text="${action}">Action</li>
                     </ul>
                     <ul th:if="${project.results != null && !#lists.isEmpty(project.results)}">
                         <li th:each="result : ${project.results}" th:text="${result}">Result</li>
                     </ul>
+                    <p class="mono" th:if="${project.achievements != null && project.achievements != ''}" th:text="${project.achievements}">Achievements</p>
                     <p class="mono" th:if="${project.technologies != null && !#lists.isEmpty(project.technologies)}" th:text="${#strings.listJoin(project.technologies, ' · ')}">Stack</p>
                 </div>
             </div>
@@ -289,13 +299,21 @@
             <span th:if="${resume.resumeData.skills.languages != null}" th:each="skill, iterStat : ${resume.resumeData.skills.languages}">
                 <span th:if="${iterStat.first && (resume.resumeData.skills.programming != null || resume.resumeData.skills.frameworks != null || resume.resumeData.skills.databases != null || resume.resumeData.skills.tools != null || resume.resumeData.skills.cloud != null)}"> · </span><span th:text="${skill}">English</span><span th:if="${!iterStat.last}"> · </span>
             </span>
+            <span th:if="${resume.resumeData.skills.softSkills != null}" th:each="skill, iterStat : ${resume.resumeData.skills.softSkills}">
+                <span th:if="${iterStat.first && (resume.resumeData.skills.programming != null || resume.resumeData.skills.frameworks != null || resume.resumeData.skills.databases != null || resume.resumeData.skills.tools != null || resume.resumeData.skills.cloud != null || resume.resumeData.skills.languages != null)}"> · </span><span th:text="${skill}">Soft</span><span th:if="${!iterStat.last}"> · </span>
+            </span>
+            <span th:if="${resume.resumeData.skills.spokenLanguages != null}" th:each="entry, iterStat : ${resume.resumeData.skills.spokenLanguages.entrySet()}">
+                <span th:if="${iterStat.first && (resume.resumeData.skills.programming != null || resume.resumeData.skills.frameworks != null || resume.resumeData.skills.databases != null || resume.resumeData.skills.tools != null || resume.resumeData.skills.cloud != null || resume.resumeData.skills.languages != null || resume.resumeData.skills.softSkills != null)}"> · </span><span th:text="${entry.key + ' (' + entry.value + ')'}">Lang</span><span th:if="${!iterStat.last}"> · </span>
+            </span>
         </p>
     </section>
 
-    <section class="section" th:if="${resume.resumeData.projects != null && !#lists.isEmpty(resume.resumeData.projects)}">
+    <section class="section"
+             th:with="projectList=${!#lists.isEmpty(resume.resumeData.projects) ? resume.resumeData.projects : resume.resumeData.personalProjects}"
+             th:if="${projectList != null && !#lists.isEmpty(projectList)}">
         <h2>Independent Projects</h2>
         <div class="grid">
-            <div class="grid-item" th:each="project : ${resume.resumeData.projects}">
+            <div class="grid-item" th:each="project : ${projectList}">
                 <div class="duration" th:text="${project.period}">2023</div>
                 <h3 th:text="${project.name}">Project</h3>
                 <p th:if="${project.description != null && project.description != ''}" th:text="${project.description}">Description</p>
@@ -322,14 +340,22 @@
         </div>
     </section>
 
-    <section class="section" th:if="${resume.resumeData.certificationsAwards != null && !#lists.isEmpty(resume.resumeData.certificationsAwards)}">
+    <section class="section"
+             th:with="certList=${resume.resumeData.certificationsAwards}, awardList=${resume.resumeData.awards}"
+             th:if="${(certList != null && !#lists.isEmpty(certList)) || (awardList != null && !#lists.isEmpty(awardList))}">
         <h2>Certifications & Awards</h2>
         <div class="grid">
-            <div class="grid-item" th:each="cert : ${resume.resumeData.certificationsAwards}">
+            <div class="grid-item" th:each="cert : ${certList}">
                 <div class="duration" th:text="${cert.date}">2023</div>
                 <strong th:text="${cert.name}">Certification</strong>
                 <p th:if="${cert.issuer != null && cert.issuer != ''}" class="mono" th:text="${cert.issuer}">Issuer</p>
                 <p th:if="${cert.expiry != null && cert.expiry != ''}" style="font-size: 11px; color: var(--text-subtle);" th:text="${'Valid until ' + cert.expiry}">Expiry</p>
+            </div>
+            <div class="grid-item" th:each="award : ${awardList}">
+                <div class="duration" th:text="${award.date}">2023</div>
+                <strong th:text="${award.title}">Award</strong>
+                <p th:if="${award.organization != null && award.organization != ''}" class="mono" th:text="${award.organization}">Organization</p>
+                <p th:if="${award.description != null && award.description != ''}" style="font-size: 11px; color: var(--text-subtle);" th:text="${award.description}">Description</p>
             </div>
         </div>
     </section>

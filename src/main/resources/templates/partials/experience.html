@@ -11,16 +11,18 @@
             <div class="project" th:each="project : ${exp.projects}">
                 <div class="project-header">
                     <span class="project-name" th:text="${project.name}">Project Name</span>
-                    <span class="project-period" th:text="${project.period}">2023</span>
+                    <span class="project-period" th:if="${project.period != null}" th:text="${project.period}">2023</span>
                 </div>
-                <p class="challenge" th:text="${project.challenge}">Challenge</p>
-                <ul class="actions">
+                <p class="challenge" th:if="${project.challenge != null && project.challenge != ''}" th:text="${project.challenge}">Challenge</p>
+                <p class="description" th:if="${project.description != null && project.description != ''}" th:text="${project.description}">Description</p>
+                <ul class="actions" th:if="${project.actions != null && !#lists.isEmpty(project.actions)}">
                     <li th:each="action : ${project.actions}" th:text="${action}">Action</li>
                 </ul>
-                <ul class="results">
+                <ul class="results" th:if="${project.results != null && !#lists.isEmpty(project.results)}">
                     <li th:each="result : ${project.results}" th:text="${result}">Result</li>
                 </ul>
-                <p class="tech" th:text="${'Stack: ' + #strings.listJoin(project.technologies, ', ')}">Stack</p>
+                <p class="description" th:if="${project.achievements != null && project.achievements != ''}" th:text="${project.achievements}">Achievements</p>
+                <p class="tech" th:if="${project.technologies != null && !#lists.isEmpty(project.technologies)}" th:text="${'Stack: ' + #strings.listJoin(project.technologies, ', ')}">Stack</p>
             </div>
         </div>
     </article>

@@ -125,7 +125,7 @@ class GenerateResumePdfUseCaseServiceTests {
                         achievements = null
                     )
                 ),
-                certificationsAwards = null,
+                certificationsAwards = emptyList(),
                 additionalInfo = null
             ),
             createdAt = LocalDateTime.now(),
