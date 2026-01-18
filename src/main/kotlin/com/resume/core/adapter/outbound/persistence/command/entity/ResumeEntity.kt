@@ -1,7 +1,7 @@
 package com.resume.core.adapter.outbound.persistence.command.entity
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
+import tools.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.module.kotlin.readValue
 import com.resume.core.domain.model.Resume
 import com.resume.core.domain.model.ResumeData
 import io.r2dbc.postgresql.codec.Json
@@ -56,7 +56,7 @@ data class ResumeEntity(
     fun markPersisted(): ResumeEntity = apply { newRecord = false }
 
     companion object {
-        private val objectMapper = ObjectMapper().findAndRegisterModules()
+        private val objectMapper = jacksonObjectMapper()
 
         /**
          * Convert domain Resume to entity

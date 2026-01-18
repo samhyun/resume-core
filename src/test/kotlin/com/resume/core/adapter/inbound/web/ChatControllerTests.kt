@@ -12,9 +12,7 @@ import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.verify
 import org.mockito.BDDMockito.given
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.autoconfigure.security.oauth2.client.reactive.ReactiveOAuth2ClientAutoConfiguration
-import org.springframework.boot.autoconfigure.security.oauth2.resource.reactive.ReactiveOAuth2ResourceServerAutoConfiguration
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest
+import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -33,13 +31,7 @@ import reactor.core.publisher.Flux
 import java.time.Duration
 import java.util.UUID
 
-@WebFluxTest(
-    controllers = [ChatController::class],
-    excludeAutoConfiguration = [
-        ReactiveOAuth2ClientAutoConfiguration::class,
-        ReactiveOAuth2ResourceServerAutoConfiguration::class
-    ]
-)
+@WebFluxTest(controllers = [ChatController::class])
 @ContextConfiguration(classes = [ChatController::class, ChatControllerTests.TestSecurityConfig::class])
 class ChatControllerTests {
 

@@ -1,6 +1,6 @@
 package com.resume.core.adapter.outbound.persistence.command.repository
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import com.resume.core.config.R2dbcTxConfig
 import com.resume.core.domain.model.*
 import io.r2dbc.postgresql.codec.Json
@@ -9,14 +9,14 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.data.r2dbc.DataR2dbcTest
+import org.springframework.boot.data.r2dbc.test.autoconfigure.DataR2dbcTest
 import org.springframework.context.annotation.Import
 import org.springframework.r2dbc.core.DatabaseClient
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
-import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
+import org.testcontainers.postgresql.PostgreSQLContainer
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -44,7 +44,7 @@ class ResumeRepositoryTest @Autowired constructor(
          */
         @Container
         @JvmStatic
-        private val postgres = PostgreSQLContainer<Nothing>("postgres:16-alpine").apply {
+        private val postgres = PostgreSQLContainer("postgres:16-alpine").apply {
             withDatabaseName("resume_test")
             withUsername("test_user")
             withPassword("test_password")
@@ -62,9 +62,8 @@ class ResumeRepositoryTest @Autowired constructor(
             }
 
             // Testcontainers가 할당한 동적 포트 사용
-            val mappedPort = postgres.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT)
             registry.add("spring.r2dbc.url") {
-                "r2dbc:postgresql://${postgres.host}:${mappedPort}/${postgres.databaseName}"
+                "r2dbc:postgresql://${postgres.host}:${postgres.firstMappedPort}/${postgres.databaseName}"
             }
             registry.add("spring.r2dbc.username") { postgres.username }
             registry.add("spring.r2dbc.password") { postgres.password }
@@ -223,22 +222,22 @@ class ResumeRepositoryTest @Autowired constructor(
         repository.deactivateAllByUserId(userId).block()
 
         // Then
-        val activeCount = databaseClient.sql(
+        val activeCount: Long? = databaseClient.sql(
             "SELECT COUNT(*) FROM resume WHERE user_id = :userId AND is_active = true"
         )
             .bind("userId", userId)
-            .map { row, _ -> row.get(0, Long::class.java) }
+            .mapValue(Long::class.java)
             .one()
             .block()
 
         assertThat(activeCount).isEqualTo(0L)
 
         // 비활성화된 이력서 확인
-        val inactiveCount = databaseClient.sql(
+        val inactiveCount: Long? = databaseClient.sql(
             "SELECT COUNT(*) FROM resume WHERE user_id = :userId AND is_active = false"
         )
             .bind("userId", userId)
-            .map { row, _ -> row.get(0, Long::class.java) }
+            .mapValue(Long::class.java)
             .one()
             .block()
 

@@ -1,6 +1,6 @@
 package com.resume.core.adapter.outbound.client
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.module.kotlin.jacksonObjectMapper
 import com.resume.core.application.dto.write.AgentMessage
 import com.resume.core.application.dto.write.AgentMessagePart
 import com.resume.core.application.dto.write.CreateSessionCommand
@@ -128,7 +128,7 @@ class AiAgentClientTest {
 
         val recorded = server.takeRequest()
         val body = recorded.body.readUtf8()
-        val json = ObjectMapper().readTree(body)
+        val json = jacksonObjectMapper().readTree(body)
 
         assertThat(recorded.method).isEqualTo("POST")
         assertThat(recorded.path).isEqualTo("/run_sse")

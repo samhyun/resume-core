@@ -1,6 +1,6 @@
 package com.resume.core.adapter.outbound.client
 
-import com.fasterxml.jackson.databind.JsonNode
+import tools.jackson.databind.JsonNode
 import com.resume.core.application.dto.write.CreateSessionCommand
 import com.resume.core.application.dto.write.RunAgentSessionCommand
 import com.resume.core.port.outbound.external.AiAgentPort
