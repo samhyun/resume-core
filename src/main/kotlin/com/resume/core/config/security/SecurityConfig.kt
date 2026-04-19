@@ -10,8 +10,6 @@ import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.oauth2.jwt.Jwt
-import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder
-import org.springframework.security.oauth2.jwt.ReactiveJwtDecoders
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
 import org.springframework.security.oauth2.server.resource.authentication.ReactiveJwtAuthenticationConverterAdapter
 import org.springframework.security.web.server.SecurityWebFilterChain
@@ -26,9 +24,7 @@ class SecurityConfig {
     @Bean
     fun securityWebFilterChain(
         http: ServerHttpSecurity,
-        // ⬇️ 파라미터 타입을 Mono<AbstractAuthenticationToken> 로 맞춤
         jwtAuthConverter: Converter<Jwt, Mono<AbstractAuthenticationToken>>,
-        jwtDecoder: ReactiveJwtDecoder
     ): SecurityWebFilterChain =
         http
             .csrf { it.disable() }
@@ -39,15 +35,10 @@ class SecurityConfig {
             }
             .oauth2ResourceServer { rs ->
                 rs.jwt { jwt ->
-                    jwt.jwtDecoder(jwtDecoder)
-                    jwt.jwtAuthenticationConverter(jwtAuthConverter) // ⬅️ 그대로 주입
+                    jwt.jwtAuthenticationConverter(jwtAuthConverter)
                 }
             }
             .build()
-
-    @Bean
-    fun reactiveJwtDecoder(): ReactiveJwtDecoder =
-        ReactiveJwtDecoders.fromIssuerLocation("http://localhost:8080/realms/aura")
 
     /**
      * realm_access.roles / resource_access.{client}.roles -> ROLE_* 매핑
@@ -71,7 +62,6 @@ class SecurityConfig {
                 authorities
             }
         }
-        // ⬇️ 어댑터는 Converter<Jwt, Mono<AbstractAuthenticationToken>> 를 구현
         return ReactiveJwtAuthenticationConverterAdapter(delegate)
     }
 }

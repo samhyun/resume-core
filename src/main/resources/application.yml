@@ -21,9 +21,9 @@ spring:
     locations:
       - classpath:db/migration/postgres
     table: resume_app_schema_history
-    url: jdbc:postgresql://localhost:5432/app_db
-    user: app_user
-    password: app_pass
+    url: jdbc:postgresql://${APP_DB_HOST:localhost}:${APP_DB_PORT:5432}/${APP_DB_NAME:app_db}?sslMode=${APP_DB_SSLMODE:disable}
+    user: ${APP_DB_USER:app_user}
+    password: ${APP_DB_PASSWORD:app_pass}
 
   #    schemas: public
   #    default-schema: public
@@ -69,6 +69,12 @@ spring:
 #      initial-size: 5
 #      max-idle-time: PT30S
 #      validation-query: SELECT 1
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/aura}
 
 resume:
   pdf:
