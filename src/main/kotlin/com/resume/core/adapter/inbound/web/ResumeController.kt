@@ -7,15 +7,16 @@ import com.resume.core.adapter.inbound.web.model.UpdateResumeResponse
 import com.resume.core.application.dto.read.GetActiveResumeQuery
 import com.resume.core.application.dto.read.GetResumeQuery
 import com.resume.core.application.dto.read.ListResumesQuery
-import com.resume.core.application.dto.read.GenerateResumePdfQuery
+import com.resume.core.application.dto.read.GenerateResumeExportQuery
 import com.resume.core.application.usecase.read.GetActiveResumeUseCase
 import com.resume.core.application.usecase.read.GetResumeUseCase
 import com.resume.core.application.usecase.read.ListResumesUseCase
-import com.resume.core.application.usecase.read.GenerateResumePdfUseCase
+import com.resume.core.application.usecase.read.GenerateResumeExportUseCase
 import com.resume.core.application.usecase.write.SaveResumeUseCase
 import com.resume.core.application.usecase.write.UpdateResumeUseCase
 import com.resume.core.application.usecase.write.DeleteResumeUseCase
 import com.resume.core.adapter.inbound.web.support.ReactiveJwtAuthenticationFacade
+import com.resume.core.domain.model.ResumeExportFormat
 import com.resume.core.domain.model.ResumeTemplateType
 import com.resume.core.application.dto.write.DeleteResumeCommand
 import org.springframework.http.HttpStatus
@@ -40,7 +41,7 @@ class ResumeController(
     private val getActiveResumeUseCase: GetActiveResumeUseCase,
     private val listResumesUseCase: ListResumesUseCase,
     private val deleteResumeUseCase: DeleteResumeUseCase,
-    private val generateResumePdfUseCase: GenerateResumePdfUseCase,
+    private val generateResumeExportUseCase: GenerateResumeExportUseCase,
     private val authenticationFacade: ReactiveJwtAuthenticationFacade
 ) {
 
@@ -143,32 +144,61 @@ class ResumeController(
 
     /**
      * Download the resume as a PDF generated from the selected template.
+     *
+     * Kept for backward compatibility; equivalent to `/export?format=pdf`.
      */
     @GetMapping("/{resumeId}/pdf")
     fun downloadResumePdf(
         @PathVariable resumeId: String,
         @RequestParam(name = "template", defaultValue = "default") template: String
+    ): Mono<ResponseEntity<ByteArray>> =
+        export(resumeId, template, ResumeExportFormat.PDF)
+
+    /**
+     * Export the resume in the requested format (pdf | png | txt) from the selected template.
+     * `template` is ignored for txt.
+     */
+    @GetMapping("/{resumeId}/export")
+    fun exportResume(
+        @PathVariable resumeId: String,
+        @RequestParam(name = "format", defaultValue = "pdf") format: String,
+        @RequestParam(name = "template", defaultValue = "default") template: String
+    ): Mono<ResponseEntity<ByteArray>> {
+        val exportFormat = ResumeExportFormat.from(format)
+            ?: throw ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Unsupported export format: $format"
+            )
+        return export(resumeId, template, exportFormat)
+    }
+
+    private fun export(
+        resumeId: String,
+        template: String,
+        format: ResumeExportFormat
     ): Mono<ResponseEntity<ByteArray>> {
         val uuid = resumeId.toUuidOrBadRequest()
         val templateType = ResumeTemplateType.fromValue(template)
 
         return authenticationFacade.currentUserId()
             .flatMap { userId ->
-                val query = GenerateResumePdfQuery(
-                    resumeId = uuid,
-                    userId = userId,
-                    templateType = templateType
+                generateResumeExportUseCase.handle(
+                    GenerateResumeExportQuery(
+                        resumeId = uuid,
+                        userId = userId,
+                        templateType = templateType,
+                        format = format
+                    )
                 )
-                generateResumePdfUseCase.handle(query)
             }
-            .map { pdf ->
+            .map { result ->
                 ResponseEntity.ok()
                     .header(
                         HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"${pdf.fileName}\""
+                        "attachment; filename=\"${result.fileName}\""
                     )
-                    .contentType(MediaType.parseMediaType(pdf.contentType))
-                    .body(pdf.bytes)
+                    .contentType(MediaType.parseMediaType(result.contentType))
+                    .body(result.bytes)
             }
     }
 

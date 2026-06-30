@@ -79,4 +79,6 @@ spring:
 resume:
   pdf:
     wkhtmltopdf-path: ${WKHTMLTOPDF_PATH:./scripts/wkhtmltopdf.sh} # 예: ./scripts/wkhtmltopdf.sh
+    wkhtmltoimage-path: ${WKHTMLTOIMAGE_PATH:./scripts/wkhtmltoimage.sh} # PNG 내보내기 (같은 wkhtmltopdf 컨테이너)
     timeout-seconds: ${WKHTML_TIMEOUT_SECONDS:30}
+    png-width: ${WKHTML_PNG_WIDTH:1024}
