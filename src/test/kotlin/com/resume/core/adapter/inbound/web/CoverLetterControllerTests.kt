@@ -1,10 +1,12 @@
 package com.resume.core.adapter.inbound.web
 
 import com.resume.core.adapter.inbound.web.support.ReactiveJwtAuthenticationFacade
+import com.resume.core.application.dto.write.GenerateCoverLetterResult
 import com.resume.core.application.dto.write.SaveCoverLetterCommand
 import com.resume.core.application.usecase.read.GetCoverLetterUseCase
 import com.resume.core.application.usecase.read.ListCoverLettersUseCase
 import com.resume.core.application.usecase.write.DeleteCoverLetterUseCase
+import com.resume.core.application.usecase.write.GenerateCoverLetterUseCase
 import com.resume.core.application.usecase.write.SaveCoverLetterUseCase
 import com.resume.core.application.usecase.write.UpdateCoverLetterUseCase
 import com.resume.core.domain.model.CoverLetter
@@ -53,6 +55,7 @@ class CoverLetterControllerTests {
     @MockitoBean lateinit var getCoverLetterUseCase: GetCoverLetterUseCase
     @MockitoBean lateinit var listCoverLettersUseCase: ListCoverLettersUseCase
     @MockitoBean lateinit var deleteCoverLetterUseCase: DeleteCoverLetterUseCase
+    @MockitoBean lateinit var generateCoverLetterUseCase: GenerateCoverLetterUseCase
     @MockitoBean lateinit var authenticationFacade: ReactiveJwtAuthenticationFacade
 
     @Test
@@ -81,6 +84,58 @@ class CoverLetterControllerTests {
         assertThat(captor.firstValue.userId).isEqualTo("user-1")
         assertThat(captor.firstValue.content).isEqualTo("본문")
         assertThat(captor.firstValue.validationScore).isEqualTo(85)
+    }
+
+    @Test
+    fun `generate returns 200 with the unsaved draft`() {
+        given(authenticationFacade.currentUserId()).willReturn(Mono.just("user-1"))
+        given(generateCoverLetterUseCase.handle(any())).willReturn(
+            Mono.just(
+                GenerateCoverLetterResult(
+                    resumeId = UUID.randomUUID(),
+                    companyName = "Acme",
+                    position = "Backend Engineer",
+                    jobDescription = "JD",
+                    content = "생성된 본문",
+                    validationScore = 88
+                )
+            )
+        )
+
+        val request = mapOf(
+            "resumeId" to UUID.randomUUID().toString(),
+            "companyName" to "Acme",
+            "position" to "Backend Engineer",
+            "jobDescription" to "JD"
+        )
+
+        webTestClient.post()
+            .uri("/api/resume-core/cover-letters/generate")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.content").isEqualTo("생성된 본문")
+            .jsonPath("$.validationScore").isEqualTo(88)
+    }
+
+    @Test
+    fun `generate rejects blank companyName with 400`() {
+        given(authenticationFacade.currentUserId()).willReturn(Mono.just("user-1"))
+
+        val request = mapOf(
+            "resumeId" to UUID.randomUUID().toString(),
+            "companyName" to "   ",
+            "position" to "Backend Engineer"
+        )
+
+        webTestClient.post()
+            .uri("/api/resume-core/cover-letters/generate")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isBadRequest
     }
 
     @Test

@@ -1,6 +1,8 @@
 package com.resume.core.adapter.inbound.web
 
 import com.resume.core.adapter.inbound.web.model.CoverLetterResponse
+import com.resume.core.adapter.inbound.web.model.GenerateCoverLetterRequest
+import com.resume.core.adapter.inbound.web.model.GenerateCoverLetterResponse
 import com.resume.core.adapter.inbound.web.model.SaveCoverLetterRequest
 import com.resume.core.adapter.inbound.web.support.ReactiveJwtAuthenticationFacade
 import com.resume.core.application.dto.read.GetCoverLetterQuery
@@ -9,6 +11,7 @@ import com.resume.core.application.dto.write.DeleteCoverLetterCommand
 import com.resume.core.application.usecase.read.GetCoverLetterUseCase
 import com.resume.core.application.usecase.read.ListCoverLettersUseCase
 import com.resume.core.application.usecase.write.DeleteCoverLetterUseCase
+import com.resume.core.application.usecase.write.GenerateCoverLetterUseCase
 import com.resume.core.application.usecase.write.SaveCoverLetterUseCase
 import com.resume.core.application.usecase.write.UpdateCoverLetterUseCase
 import org.springframework.http.HttpStatus
@@ -37,6 +40,7 @@ class CoverLetterController(
     private val getCoverLetterUseCase: GetCoverLetterUseCase,
     private val listCoverLettersUseCase: ListCoverLettersUseCase,
     private val deleteCoverLetterUseCase: DeleteCoverLetterUseCase,
+    private val generateCoverLetterUseCase: GenerateCoverLetterUseCase,
     private val authenticationFacade: ReactiveJwtAuthenticationFacade
 ) {
 
@@ -46,6 +50,16 @@ class CoverLetterController(
         authenticationFacade.currentUserId()
             .flatMap { userId -> saveCoverLetterUseCase.handle(request.toCommand(userId)) }
             .map(CoverLetterResponse::from)
+
+    /**
+     * Generate a cover letter via the cover_letter agent (core-orchestrated). Returns an unsaved
+     * draft; the client persists it with `POST /cover-letters` if the user keeps it.
+     */
+    @PostMapping("/generate")
+    fun generate(@RequestBody request: GenerateCoverLetterRequest): Mono<GenerateCoverLetterResponse> =
+        authenticationFacade.currentUserId()
+            .flatMap { userId -> generateCoverLetterUseCase.handle(request.toCommand(userId)) }
+            .map(GenerateCoverLetterResponse::from)
 
     @GetMapping
     fun list(): Flux<CoverLetterResponse> =
