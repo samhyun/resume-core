@@ -8,12 +8,6 @@ import reactor.core.publisher.Mono
 interface AiAgentPort {
     fun createSession(req: CreateSessionCommand): Mono<AiAgentSession>
     fun runSession(req: RunAgentSessionCommand): Flux<AiAgentStreamEvent>
-
-    /**
-     * Fetch a session's current snapshot (including its full state) — used by core-side
-     * orchestration to read the agent's final output after a run completes.
-     */
-    fun getSession(appName: String, userId: String, sessionId: String): Mono<AiAgentSession>
 }
 
 data class AiAgentSession(

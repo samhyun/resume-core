@@ -1,7 +1,6 @@
 package com.resume.core.adapter.inbound.web
 
 import com.resume.core.adapter.inbound.web.support.ReactiveJwtAuthenticationFacade
-import com.resume.core.application.dto.write.GenerateCoverLetterResult
 import com.resume.core.application.dto.write.SaveCoverLetterCommand
 import com.resume.core.application.usecase.read.GetCoverLetterUseCase
 import com.resume.core.application.usecase.read.ListCoverLettersUseCase
@@ -10,6 +9,7 @@ import com.resume.core.application.usecase.write.GenerateCoverLetterUseCase
 import com.resume.core.application.usecase.write.SaveCoverLetterUseCase
 import com.resume.core.application.usecase.write.UpdateCoverLetterUseCase
 import com.resume.core.domain.model.CoverLetter
+import com.resume.core.port.outbound.external.AiAgentStreamEvent
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
@@ -20,7 +20,9 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.MediaType
+import org.springframework.http.codec.ServerSentEvent
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
 import org.springframework.security.config.web.server.ServerHttpSecurity
 import org.springframework.security.web.server.SecurityWebFilterChain
@@ -29,6 +31,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
+import java.time.Duration
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -87,18 +90,12 @@ class CoverLetterControllerTests {
     }
 
     @Test
-    fun `generate returns 200 with the unsaved draft`() {
+    fun `generate streams agent events as SSE`() {
         given(authenticationFacade.currentUserId()).willReturn(Mono.just("user-1"))
-        given(generateCoverLetterUseCase.handle(any())).willReturn(
-            Mono.just(
-                GenerateCoverLetterResult(
-                    resumeId = UUID.randomUUID(),
-                    companyName = "Acme",
-                    position = "Backend Engineer",
-                    jobDescription = "JD",
-                    content = "생성된 본문",
-                    validationScore = 88
-                )
+        given(generateCoverLetterUseCase.stream(any())).willReturn(
+            Flux.just(
+                AiAgentStreamEvent(id = "1", data = "{\"text\":\"생성된 본문\"}"),
+                AiAgentStreamEvent(event = "end")
             )
         )
 
@@ -109,15 +106,20 @@ class CoverLetterControllerTests {
             "jobDescription" to "JD"
         )
 
-        webTestClient.post()
+        val result = webTestClient.post()
             .uri("/api/resume-core/cover-letters/generate")
             .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.TEXT_EVENT_STREAM)
             .bodyValue(request)
             .exchange()
             .expectStatus().isOk
-            .expectBody()
-            .jsonPath("$.content").isEqualTo("생성된 본문")
-            .jsonPath("$.validationScore").isEqualTo(88)
+            .expectHeader().contentTypeCompatibleWith(MediaType.TEXT_EVENT_STREAM)
+            .returnResult(object : ParameterizedTypeReference<ServerSentEvent<String>>() {})
+
+        val events = result.responseBody.collectList().block(Duration.ofSeconds(2))
+        assertThat(events).isNotNull
+        assertThat(events!!).hasSize(2)
+        assertThat(events[0].data()).isEqualTo("{\"text\":\"생성된 본문\"}")
     }
 
     @Test

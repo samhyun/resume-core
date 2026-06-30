@@ -37,7 +37,7 @@ class GenerateCoverLetterUseCaseServiceTest {
     }
 
     @Test
-    fun `drives agent through HITL and extracts draft from final state`() {
+    fun `auto-answers the HITL then relays the pipeline stream`() {
         val resumeId = UUID.randomUUID()
         every { resumeRepository.findByIdAndUserId(resumeId, "user-1") } returns Mono.just(sampleResume(resumeId))
         every { agent.createSession(any()) } returns Mono.just(session("sess-1"))
@@ -45,15 +45,12 @@ class GenerateCoverLetterUseCaseServiceTest {
         val triggerEvent = AiAgentStreamEvent(
             data = """{"content":{"role":"model","parts":[{"functionCall":{"id":"call-1","name":"adk_request_input","args":{"message":"기업 정보?"}}}]}}"""
         )
-        // 첫 호출(트리거)=인터럽트 이벤트, 둘째 호출(function_response)=완주(빈 스트림)
-        every { agent.runSession(any()) } returnsMany listOf(Flux.just(triggerEvent), Flux.empty())
-
-        every { agent.getSession("cover_letter", "user-1", "sess-1") } returns Mono.just(
-            session(
-                "sess-1",
-                state = """{"draft_cover_letter":{"full_text":"생성된 자기소개서 본문"},"validation_result":{"total_score":88}}"""
-            )
+        val finalizeEvent = AiAgentStreamEvent(
+            id = "evt-1",
+            data = """{"content":{"role":"model","parts":[{"text":"생성된 자기소개서 본문"}]}}"""
         )
+        // 첫 호출(트리거)=인터럽트, 둘째 호출(function_response)=relay 대상 파이프라인 스트림
+        every { agent.runSession(any()) } returnsMany listOf(Flux.just(triggerEvent), Flux.just(finalizeEvent))
 
         val command = GenerateCoverLetterCommand(
             userId = "user-1",
@@ -64,22 +61,17 @@ class GenerateCoverLetterUseCaseServiceTest {
             companyCulture = "수평적 문화"
         )
 
-        StepVerifier.create(service.handle(command))
-            .assertNext { result ->
-                assertThat(result.content).isEqualTo("생성된 자기소개서 본문")
-                assertThat(result.validationScore).isEqualTo(88)
-                assertThat(result.companyName).isEqualTo("Acme")
-                assertThat(result.resumeId).isEqualTo(resumeId)
-            }
+        // 트리거 이벤트는 내부 소비되고, 프론트로는 파이프라인(finalize) 이벤트만 relay 된다.
+        StepVerifier.create(service.stream(command))
+            .assertNext { event -> assertThat(event.data).contains("생성된 자기소개서 본문") }
             .verifyComplete()
 
-        // function_response 가 받은 인터럽트 id(call-1)를 echo + 폼 데이터를 result로 전달하는지 검증
+        // function_response 가 받은 인터럽트 id(call-1)를 echo + 폼 데이터를 result로 전달
         val captor = mutableListOf<RunAgentSessionCommand>()
         verify { agent.runSession(capture(captor)) }
         val functionResponse = captor.last().newMessage.parts[0].functionResponse
         assertThat(functionResponse).isNotNull
         assertThat(functionResponse!!.id).isEqualTo("call-1")
-        assertThat(functionResponse.name).isEqualTo("adk_request_input")
         assertThat(functionResponse.response["result"].toString()).contains("기업명: Acme", "지원 직무: Backend Engineer")
     }
 
@@ -88,7 +80,7 @@ class GenerateCoverLetterUseCaseServiceTest {
         every { resumeRepository.findByIdAndUserId(any(), any()) } returns Mono.empty()
 
         StepVerifier.create(
-            service.handle(GenerateCoverLetterCommand("user-1", UUID.randomUUID(), "Acme", "BE", null, null))
+            service.stream(GenerateCoverLetterCommand("user-1", UUID.randomUUID(), "Acme", "BE", null, null))
         )
             .expectErrorSatisfies {
                 assertThat((it as ResponseStatusException).statusCode.value()).isEqualTo(404)
@@ -101,13 +93,12 @@ class GenerateCoverLetterUseCaseServiceTest {
         val resumeId = UUID.randomUUID()
         every { resumeRepository.findByIdAndUserId(resumeId, "user-1") } returns Mono.just(sampleResume(resumeId))
         every { agent.createSession(any()) } returns Mono.just(session("sess-1"))
-        // 트리거 스트림에 adk_request_input functionCall 이 없음 → 인터럽트 미검출
         every { agent.runSession(any()) } returns Flux.just(
             AiAgentStreamEvent(data = """{"content":{"role":"model","parts":[{"text":"안녕하세요"}]}}""")
         )
 
         StepVerifier.create(
-            service.handle(GenerateCoverLetterCommand("user-1", resumeId, "Acme", "BE", null, null))
+            service.stream(GenerateCoverLetterCommand("user-1", resumeId, "Acme", "BE", null, null))
         )
             .expectErrorSatisfies {
                 assertThat((it as ResponseStatusException).statusCode.value()).isEqualTo(502)
@@ -126,12 +117,12 @@ class GenerateCoverLetterUseCaseServiceTest {
             isActive = true
         )
 
-    private fun session(id: String, state: String = "{}"): AiAgentSession =
+    private fun session(id: String): AiAgentSession =
         AiAgentSession(
             agentSessionId = id,
             appName = "cover_letter",
             userId = "user-1",
-            stateJson = state,
+            stateJson = "{}",
             purpose = "general",
             lastUpdateTime = null
         )

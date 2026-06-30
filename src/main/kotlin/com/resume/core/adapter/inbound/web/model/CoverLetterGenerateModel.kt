@@ -1,7 +1,6 @@
 package com.resume.core.adapter.inbound.web.model
 
 import com.resume.core.application.dto.write.GenerateCoverLetterCommand
-import com.resume.core.application.dto.write.GenerateCoverLetterResult
 import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
 import java.util.UUID
@@ -33,27 +32,5 @@ data class GenerateCoverLetterRequest(
             jobDescription = jobDescription?.trim()?.takeIf { it.isNotEmpty() },
             companyCulture = companyCulture?.trim()?.takeIf { it.isNotEmpty() }
         )
-    }
-}
-
-/** Generated draft (not yet persisted). The client saves it via `POST /cover-letters`. */
-data class GenerateCoverLetterResponse(
-    val resumeId: UUID,
-    val companyName: String,
-    val position: String,
-    val jobDescription: String?,
-    val content: String,
-    val validationScore: Int?
-) {
-    companion object {
-        fun from(result: GenerateCoverLetterResult): GenerateCoverLetterResponse =
-            GenerateCoverLetterResponse(
-                resumeId = result.resumeId,
-                companyName = result.companyName,
-                position = result.position,
-                jobDescription = result.jobDescription,
-                content = result.content,
-                validationScore = result.validationScore
-            )
     }
 }

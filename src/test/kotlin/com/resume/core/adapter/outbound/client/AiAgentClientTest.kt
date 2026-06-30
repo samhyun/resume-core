@@ -229,33 +229,4 @@ class AiAgentClientTest {
         assertThat(part.path("functionResponse").path("response").path("result").asText())
             .isEqualTo("5년 경력입니다")
     }
-
-    @Test
-    fun `getSession fetches the session state via GET`() {
-        server.enqueue(
-            MockResponse()
-                .setHeader("Content-Type", "application/json")
-                .setBody(
-                    """
-                    {
-                      "id": "sess-1",
-                      "appName": "cover_letter",
-                      "userId": "user-1",
-                      "state": {"purpose": "general", "draft_cover_letter": {"full_text": "본문"}}
-                    }
-                    """.trimIndent()
-                )
-        )
-
-        StepVerifier.create(client.getSession("cover_letter", "user-1", "sess-1"))
-            .assertNext { session ->
-                assertThat(session.agentSessionId).isEqualTo("sess-1")
-                assertThat(session.stateJson).contains("draft_cover_letter")
-            }
-            .verifyComplete()
-
-        val recorded = server.takeRequest()
-        assertThat(recorded.method).isEqualTo("GET")
-        assertThat(recorded.path).isEqualTo("/apps/cover_letter/users/user-1/sessions/sess-1")
-    }
 }

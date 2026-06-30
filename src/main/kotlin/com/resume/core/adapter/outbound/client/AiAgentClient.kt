@@ -60,13 +60,6 @@ class AiAgentClient(
                 )
             }
 
-    override fun getSession(appName: String, userId: String, sessionId: String): Mono<AiAgentSession> =
-        client.get()
-            .uri("/apps/{app}/users/{user}/sessions/{session}", appName, userId, sessionId)
-            .retrieve()
-            .bodyToMono(JsonNode::class.java)
-            .map(::toAiAgentSession)
-
     private fun toAiAgentSession(node: JsonNode): AiAgentSession {
         val stateNode: JsonNode = node.path("state")
         val stateJson = if (stateNode.isMissingNode || stateNode.isNull) "{}" else stateNode.toString()
