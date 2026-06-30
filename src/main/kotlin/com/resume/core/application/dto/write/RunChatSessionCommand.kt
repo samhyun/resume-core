@@ -25,6 +25,21 @@ data class RunChatSessionCommand(
                     part = part
                 )
             )
+
+        fun functionResponse(
+            sessionId: UUID,
+            id: String,
+            name: String,
+            result: String
+        ): RunChatSessionCommand =
+            RunChatSessionCommand(
+                sessionId = sessionId,
+                message = ChatMessagePayload.FunctionResponse(
+                    id = id,
+                    name = name,
+                    result = result
+                )
+            )
     }
 }
 
@@ -34,5 +49,12 @@ sealed interface ChatMessagePayload {
         val displayName: String?,
         val mimeType: String,
         val part: FilePart
+    ) : ChatMessagePayload
+
+    /** ADK 2.0 HITL 인터럽트 답변(function_response 재개). id는 받은 interrupt id를 echo. */
+    data class FunctionResponse(
+        val id: String,
+        val name: String,
+        val result: String
     ) : ChatMessagePayload
 }

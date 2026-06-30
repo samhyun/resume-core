@@ -1,6 +1,7 @@
 package com.resume.core.application.usecase.read
 
 import com.resume.core.adapter.outbound.persistence.command.repository.ChatSessionRepository
+import com.resume.core.application.dto.write.AgentFunctionResponse
 import com.resume.core.application.dto.write.AgentInlineData
 import com.resume.core.application.dto.write.AgentMessage
 import com.resume.core.application.dto.write.AgentMessagePart
@@ -54,6 +55,21 @@ class StreamChatSessionUseCaseService(
             AgentMessage(
                 role = "user",
                 parts = listOf(AgentMessagePart(text = text))
+            )
+        )
+        // HITL 재개: function_response 단독 파트(text와 섞지 않음). response 는 {"result": <답변>}.
+        is ChatMessagePayload.FunctionResponse -> Mono.just(
+            AgentMessage(
+                role = "user",
+                parts = listOf(
+                    AgentMessagePart(
+                        functionResponse = AgentFunctionResponse(
+                            id = id,
+                            name = name,
+                            response = mapOf("result" to result)
+                        )
+                    )
+                )
             )
         )
         is ChatMessagePayload.File -> DataBufferUtils.join(part.content())

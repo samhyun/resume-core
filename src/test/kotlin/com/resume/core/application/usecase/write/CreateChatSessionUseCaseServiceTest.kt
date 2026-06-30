@@ -39,7 +39,7 @@ class CreateChatSessionUseCaseServiceTest {
             agentSessionId = "ext-123",
             appName = "resume-core",
             userId = "user-1",
-            stateJson = "{\"state\":{\"purpose\":\"interview_prep\"}}",
+            stateJson = "{\"purpose\":\"interview_prep\"}",
             purpose = "interview_prep",
             lastUpdateTime = 42.0
         )

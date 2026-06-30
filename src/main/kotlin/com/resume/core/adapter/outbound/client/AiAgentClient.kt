@@ -26,12 +26,17 @@ class AiAgentClient(
 
     override fun createSession(req: CreateSessionCommand): Mono<AiAgentSession> {
         val ids = req.ids
-        val body = mapOf("state" to mapOf("purpose" to req.purpose.value))
+        // ADK 2.0 `POST /apps/.../sessions/{id}` (create_session_with_id) 는 요청 body 전체를 초기 state로 사용한다.
+        // `{"state": {...}}` 래퍼로 감싸면 state.state.x 로 이중 중첩돼 에이전트가 못 읽으므로 평면으로 보낸다.
+        val state = buildMap<String, Any> {
+            put("purpose", req.purpose.value)
+            req.resumeData?.let { put("resume_data", it) }
+        }
 
         return client.post()
             .uri("/apps/{app}/users/{user}/sessions/{session}", ids.appName, ids.userId, ids.sessionId)
             .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(body)
+            .bodyValue(state)
             .retrieve()
             .bodyToMono(JsonNode::class.java)
             .map(::toAiAgentSession)
@@ -58,7 +63,8 @@ class AiAgentClient(
     private fun toAiAgentSession(node: JsonNode): AiAgentSession {
         val stateNode: JsonNode = node.path("state")
         val stateJson = if (stateNode.isMissingNode || stateNode.isNull) "{}" else stateNode.toString()
-        val purpose = stateNode.path("state").path("purpose").takeIf { !it.isMissingNode && !it.isNull }?.asText()
+        // 평면 state 주입에 맞춰 단일 경로(state.purpose)로 읽는다 (구버전 이중중첩 state.state.purpose 아님).
+        val purpose = stateNode.path("purpose").takeIf { !it.isMissingNode && !it.isNull }?.asText()
         val lastUpdateTime = node.path("lastUpdateTime").takeIf { it.isNumber }?.asDouble()
 
         return AiAgentSession(

@@ -1,6 +1,7 @@
 package com.resume.core.adapter.outbound.client
 
 import tools.jackson.module.kotlin.jacksonObjectMapper
+import com.resume.core.application.dto.write.AgentFunctionResponse
 import com.resume.core.application.dto.write.AgentMessage
 import com.resume.core.application.dto.write.AgentMessagePart
 import com.resume.core.application.dto.write.CreateSessionCommand
@@ -45,7 +46,7 @@ class AiAgentClientTest {
                       "id": "ext-123",
                       "appName": "resume-agent",
                       "userId": "user-1",
-                      "state": {"state": {"purpose": "interview_prep"}},
+                      "state": {"purpose": "interview_prep"},
                       "lastUpdateTime": 42.0
                     }
                     """.trimIndent()
@@ -76,6 +77,52 @@ class AiAgentClientTest {
         assertThat(recorded.method).isEqualTo("POST")
         assertThat(recorded.path).isEqualTo("/apps/resume-agent/users/user-1/sessions/client-session")
         assertThat(recorded.getHeader("Content-Type")).isEqualTo("application/json")
+
+        // ADK 2.0: 평면 state 주입(래퍼 없이). state.purpose 로 보내고 state.state 이중중첩이 아니어야 한다.
+        val sentBody = jacksonObjectMapper().readTree(recorded.body.readUtf8())
+        assertThat(sentBody.path("purpose").asText()).isEqualTo("interview_prep")
+        assertThat(sentBody.has("state")).isFalse()
+    }
+
+    @Test
+    fun `createSession injects resume_data into flat state when provided`() {
+        server.enqueue(
+            MockResponse()
+                .setHeader("Content-Type", "application/json")
+                .setBody(
+                    """
+                    {
+                      "id": "ext-cover-1",
+                      "appName": "cover_letter",
+                      "userId": "user-1",
+                      "state": {"purpose": "general", "resume_data": "{\"name\":\"홍길동\"}"}
+                    }
+                    """.trimIndent()
+                )
+        )
+
+        val command = CreateSessionCommand(
+            ids = SessionIds(
+                appName = "cover_letter",
+                userId = "user-1",
+                sessionId = "client-session"
+            ),
+            purpose = SessionPurpose.GENERAL,
+            resumeData = "{\"name\":\"홍길동\"}"
+        )
+
+        StepVerifier.create(client.createSession(command))
+            .assertNext { session ->
+                assertThat(session.appName).isEqualTo("cover_letter")
+                assertThat(session.stateJson).contains("resume_data")
+            }
+            .verifyComplete()
+
+        val recorded = server.takeRequest()
+        val sentBody = jacksonObjectMapper().readTree(recorded.body.readUtf8())
+        assertThat(sentBody.path("purpose").asText()).isEqualTo("general")
+        assertThat(sentBody.path("resume_data").asText()).isEqualTo("{\"name\":\"홍길동\"}")
+        assertThat(sentBody.has("state")).isFalse()
     }
 
     @Test
@@ -141,5 +188,45 @@ class AiAgentClientTest {
         val messageNode = json.path("newMessage")
         assertThat(messageNode.path("role").asText()).isEqualTo("user")
         assertThat(messageNode.path("parts")[0].path("text").asText()).isEqualTo("Hello")
+    }
+
+    @Test
+    fun `runSession serializes function_response part for HITL resume`() {
+        server.enqueue(
+            MockResponse()
+                .setHeader("Content-Type", "text/event-stream")
+                .setBody("event: end\n\n")
+        )
+
+        val command = RunAgentSessionCommand(
+            appName = "interview",
+            userId = "user-1",
+            sessionId = "agent-session",
+            newMessage = AgentMessage(
+                role = "user",
+                parts = listOf(
+                    AgentMessagePart(
+                        functionResponse = AgentFunctionResponse(
+                            id = "iv_answer",
+                            name = "adk_request_input",
+                            response = mapOf("result" to "5년 경력입니다")
+                        )
+                    )
+                )
+            )
+        )
+
+        client.runSession(command).take(1).collectList().block(Duration.ofSeconds(1))
+
+        val recorded = server.takeRequest()
+        val json = jacksonObjectMapper().readTree(recorded.body.readUtf8())
+        val part = json.path("newMessage").path("parts")[0]
+
+        // function_response 단독 파트 — text 와 섞이면 안 됨.
+        assertThat(part.has("text")).isFalse()
+        assertThat(part.path("functionResponse").path("id").asText()).isEqualTo("iv_answer")
+        assertThat(part.path("functionResponse").path("name").asText()).isEqualTo("adk_request_input")
+        assertThat(part.path("functionResponse").path("response").path("result").asText())
+            .isEqualTo("5년 경력입니다")
     }
 }

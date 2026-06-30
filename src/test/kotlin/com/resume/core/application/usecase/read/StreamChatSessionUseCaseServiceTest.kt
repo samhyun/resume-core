@@ -69,6 +69,38 @@ class StreamChatSessionUseCaseServiceTest {
     }
 
     @Test
+    fun `stream maps function_response payload for HITL resume`() {
+        val sessionId = UUID.randomUUID()
+        val entity = sampleEntity(sessionId)
+
+        val captured = slot<com.resume.core.application.dto.write.RunAgentSessionCommand>()
+        every { repository.findById(sessionId) } returns Mono.just(entity)
+        every { agent.runSession(capture(captured)) } returns Flux.just(AiAgentStreamEvent(data = "ok"))
+
+        StepVerifier.create(
+            useCase.stream(
+                RunChatSessionCommand.functionResponse(
+                    sessionId = sessionId,
+                    id = "iv_answer",
+                    name = "adk_request_input",
+                    result = "5년 경력입니다"
+                )
+            )
+        )
+            .expectNext(AiAgentStreamEvent(data = "ok"))
+            .verifyComplete()
+
+        val part = captured.captured.newMessage.parts[0]
+        assertThat(part.text).isNull()
+        assertThat(part.inlineData).isNull()
+        val functionResponse = part.functionResponse
+        assertThat(functionResponse).isNotNull
+        assertThat(functionResponse!!.id).isEqualTo("iv_answer")
+        assertThat(functionResponse.name).isEqualTo("adk_request_input")
+        assertThat(functionResponse.response).isEqualTo(mapOf("result" to "5년 경력입니다"))
+    }
+
+    @Test
     fun `stream encodes file payloads as inline data`() {
         val sessionId = UUID.randomUUID()
         val entity = sampleEntity(sessionId)
