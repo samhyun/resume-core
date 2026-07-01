@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest
@@ -48,8 +49,8 @@ class ProfileControllerTests {
 
     @Test
     fun `get returns the current user's profile`() {
-        given(authenticationFacade.currentUsername()).willReturn(Mono.just("tester"))
-        given(getUserProfileUseCase.handle("tester")).willReturn(Mono.just(sampleProfile()))
+        given(authenticationFacade.currentToken()).willReturn(Mono.just("tok"))
+        given(getUserProfileUseCase.handle("tok")).willReturn(Mono.just(sampleProfile()))
 
         webTestClient.get()
             .uri("/api/resume-core/profile")
@@ -61,13 +62,13 @@ class ProfileControllerTests {
     }
 
     @Test
-    fun `put updates profile scoped to the current user`() {
-        given(authenticationFacade.currentUsername()).willReturn(Mono.just("tester"))
-        given(updateUserProfileUseCase.handle(any())).willReturn(
-            Mono.just(sampleProfile().copy(displayName = "새 표시명", firstName = "길동"))
+    fun `put forwards the token and edited fields`() {
+        given(authenticationFacade.currentToken()).willReturn(Mono.just("tok"))
+        given(updateUserProfileUseCase.handle(any(), any())).willReturn(
+            Mono.just(sampleProfile().copy(firstName = "길동", lastName = "홍"))
         )
 
-        val request = mapOf("displayName" to "새 표시명", "firstName" to "길동")
+        val request = mapOf("firstName" to "길동", "lastName" to "홍")
 
         webTestClient.put()
             .uri("/api/resume-core/profile")
@@ -76,35 +77,18 @@ class ProfileControllerTests {
             .exchange()
             .expectStatus().isOk
             .expectBody()
-            .jsonPath("$.displayName").isEqualTo("새 표시명")
+            .jsonPath("$.firstName").isEqualTo("길동")
 
         val captor = argumentCaptor<UpdateUserProfileCommand>()
-        verify(updateUserProfileUseCase).handle(captor.capture())
-        // 항상 JWT 의 preferred_username 으로 스코프 — 타인 프로필 수정 불가
-        assertThat(captor.firstValue.username).isEqualTo("tester")
-        assertThat(captor.firstValue.displayName).isEqualTo("새 표시명")
+        verify(updateUserProfileUseCase).handle(eq("tok"), captor.capture())
         assertThat(captor.firstValue.firstName).isEqualTo("길동")
-    }
-
-    @Test
-    fun `put rejects an over-long field with 400`() {
-        given(authenticationFacade.currentUsername()).willReturn(Mono.just("tester"))
-
-        val request = mapOf("displayName" to "a".repeat(101))
-
-        webTestClient.put()
-            .uri("/api/resume-core/profile")
-            .contentType(MediaType.APPLICATION_JSON)
-            .bodyValue(request)
-            .exchange()
-            .expectStatus().isBadRequest
+        assertThat(captor.firstValue.lastName).isEqualTo("홍")
     }
 
     private fun sampleProfile(): UserProfile =
         UserProfile(
             username = "tester",
             email = "tester@example.com",
-            displayName = "old",
             firstName = null,
             lastName = null,
             emailVerified = true

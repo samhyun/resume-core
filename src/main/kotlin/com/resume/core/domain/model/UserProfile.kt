@@ -1,14 +1,13 @@
 package com.resume.core.domain.model
 
 /**
- * The authenticated user's editable profile, backed by the `app_user` table (the Keycloak
- * user store). Identity/security fields (username, password, email verification) are not part
- * of this model — only the display fields a user may freely edit.
+ * The authenticated user's profile, sourced from Keycloak (the identity provider) — users are
+ * managed in Keycloak, not in a local table. Editable fields are [firstName]/[lastName];
+ * [username]/[email]/[emailVerified] are read-only here.
  */
 data class UserProfile(
     val username: String,
-    val email: String,
-    val displayName: String?,
+    val email: String?,
     val firstName: String?,
     val lastName: String?,
     val emailVerified: Boolean

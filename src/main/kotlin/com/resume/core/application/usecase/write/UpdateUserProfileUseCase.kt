@@ -5,5 +5,5 @@ import com.resume.core.domain.model.UserProfile
 import reactor.core.publisher.Mono
 
 interface UpdateUserProfileUseCase {
-    fun handle(command: UpdateUserProfileCommand): Mono<UserProfile>
+    fun handle(accessToken: String, command: UpdateUserProfileCommand): Mono<UserProfile>
 }

@@ -82,3 +82,7 @@ resume:
     wkhtmltoimage-path: ${WKHTMLTOIMAGE_PATH:./scripts/wkhtmltoimage.sh} # PNG 내보내기 (같은 wkhtmltopdf 컨테이너)
     timeout-seconds: ${WKHTML_TIMEOUT_SECONDS:30}
     png-width: ${WKHTML_PNG_WIDTH:1024}
+
+keycloak:
+  # 프로필 조회/수정을 위임하는 Keycloak realm 베이스 URL (Account API = {realm-url}/account)
+  realm-url: ${KEYCLOAK_REALM_URL:http://localhost:8080/realms/aura}

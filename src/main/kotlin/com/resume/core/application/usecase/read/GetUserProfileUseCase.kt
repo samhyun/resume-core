@@ -4,5 +4,5 @@ import com.resume.core.domain.model.UserProfile
 import reactor.core.publisher.Mono
 
 interface GetUserProfileUseCase {
-    fun handle(username: String): Mono<UserProfile>
+    fun handle(accessToken: String): Mono<UserProfile>
 }

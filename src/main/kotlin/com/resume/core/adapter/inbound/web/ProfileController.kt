@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RestController
 import reactor.core.publisher.Mono
 
 /**
- * The authenticated user's own profile. Always scoped to the JWT's `preferred_username` —
- * there is no path/userId parameter, so a user can only read/edit their own profile.
+ * The authenticated user's own profile, proxied to Keycloak. Always scoped to the caller's token —
+ * no path/userId parameter, so a user can only read/edit their own profile.
  */
 @RestController
 @RequestMapping("/api/resume-core/profile")
@@ -26,13 +26,13 @@ class ProfileController(
 
     @GetMapping
     fun get(): Mono<ProfileResponse> =
-        authenticationFacade.currentUsername()
-            .flatMap { username -> getUserProfileUseCase.handle(username) }
+        authenticationFacade.currentToken()
+            .flatMap { token -> getUserProfileUseCase.handle(token) }
             .map(ProfileResponse::from)
 
     @PutMapping
     fun update(@RequestBody request: UpdateProfileRequest): Mono<ProfileResponse> =
-        authenticationFacade.currentUsername()
-            .flatMap { username -> updateUserProfileUseCase.handle(request.toCommand(username)) }
+        authenticationFacade.currentToken()
+            .flatMap { token -> updateUserProfileUseCase.handle(token, request.toCommand()) }
             .map(ProfileResponse::from)
 }

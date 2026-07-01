@@ -35,13 +35,9 @@ class ReactiveJwtAuthenticationFacade {
             }
 
     /**
-     * The `preferred_username` claim (= `app_user.username`). Used to locate the user's row in the
-     * app_user store — the JWT `subject` is the federated id (`f:<component>:<id>`), not the username.
+     * The raw access-token string of the current request — forwarded to downstream identity-provider
+     * calls (e.g. the Keycloak Account API) so they act as the authenticated user.
      */
-    fun currentUsername(): Mono<String> =
-        currentJwt()
-            .map { jwt ->
-                jwt.getClaimAsString("preferred_username")?.takeIf { it.isNotBlank() }
-                    ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Username not found in token")
-            }
+    fun currentToken(): Mono<String> =
+        currentJwt().map { it.tokenValue }
 }
