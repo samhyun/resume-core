@@ -33,4 +33,15 @@ class ReactiveJwtAuthenticationFacade {
                 jwt.subject?.takeIf { it.isNotBlank() }
                     ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "User ID not found in token")
             }
+
+    /**
+     * The `preferred_username` claim (= `app_user.username`). Used to locate the user's row in the
+     * app_user store — the JWT `subject` is the federated id (`f:<component>:<id>`), not the username.
+     */
+    fun currentUsername(): Mono<String> =
+        currentJwt()
+            .map { jwt ->
+                jwt.getClaimAsString("preferred_username")?.takeIf { it.isNotBlank() }
+                    ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "Username not found in token")
+            }
 }
