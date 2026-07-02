@@ -18,10 +18,13 @@ interface ChatSessionRepository: ReactiveCrudRepository<ChatSessionEntity, UUID>
     fun closeActiveByUser(userId: String): Mono<Int>  // rowsUpdated
 
     @Query("""
-    SELECT * FROM chat_session 
+    SELECT * FROM chat_session
      WHERE user_id = :userId AND status='ACTIVE'
      ORDER BY created_at DESC
      LIMIT 1
   """)
     fun findActiveByUser(userId: String): Mono<ChatSessionEntity>
+
+    /** 소유 사용자로 스코프된 단건 조회 (타 사용자 세션 접근 차단) */
+    fun findByIdAndUserId(id: UUID, userId: String): Mono<ChatSessionEntity>
 }

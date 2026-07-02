@@ -4,10 +4,12 @@ import com.resume.core.application.dto.write.ChatMessagePayload
 import com.resume.core.application.dto.write.CreateChatSessionResult
 import com.resume.core.application.dto.write.CreateSessionCommand
 import com.resume.core.application.dto.write.RunChatSessionCommand
+import com.resume.core.adapter.inbound.web.support.ReactiveJwtAuthenticationFacade
 import com.resume.core.application.usecase.read.StreamChatSessionUseCase
 import com.resume.core.application.usecase.write.CreateChatSessionUseCase
 import com.resume.core.port.outbound.external.AiAgentStreamEvent
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
@@ -57,6 +59,15 @@ class ChatControllerTests {
 
     @MockitoBean
     lateinit var streamChatSessionUseCase: StreamChatSessionUseCase
+
+    @MockitoBean
+    lateinit var authenticationFacade: ReactiveJwtAuthenticationFacade
+
+    @BeforeEach
+    fun setUpAuth() {
+        // 컨트롤러가 JWT sub에서 userId를 파생하므로, 인증 사용자를 고정값으로 스텁한다.
+        given(authenticationFacade.currentUserId()).willReturn(Mono.just(AUTH_USER_ID))
+    }
 
     @Test
     fun `runSseMultipart accepts file and streams events`() {
@@ -253,7 +264,6 @@ class ChatControllerTests {
 
         val request = mapOf(
             "appName" to "cover_letter",
-            "userId" to "user-1",
             "resumeData" to "{\"name\":\"홍길동\"}"
         )
 
@@ -268,6 +278,8 @@ class ChatControllerTests {
         verify(createChatSessionUseCase).handle(captor.capture())
         val command = captor.firstValue
         assertThat(command.ids.appName).isEqualTo("cover_letter")
+        // userId는 요청 본문이 아니라 인증된 JWT(sub)에서 채워진다.
+        assertThat(command.ids.userId).isEqualTo(AUTH_USER_ID)
         assertThat(command.resumeData).isEqualTo("{\"name\":\"홍길동\"}")
     }
 
@@ -275,7 +287,6 @@ class ChatControllerTests {
     fun `create session rejects blank resumeData`() {
         val request = mapOf(
             "appName" to "cover_letter",
-            "userId" to "user-1",
             "resumeData" to "   "
         )
 
@@ -292,5 +303,9 @@ class ChatControllerTests {
         private val filename: String
     ) : ByteArrayResource(bytes) {
         override fun getFilename(): String = filename
+    }
+
+    private companion object {
+        const val AUTH_USER_ID = "auth-user-1"
     }
 }

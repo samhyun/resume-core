@@ -1,15 +1,14 @@
 package com.resume.core.application.usecase.read
 
-import com.resume.core.adapter.outbound.persistence.command.entity.ChatSessionEntity
-import com.resume.core.adapter.outbound.persistence.command.repository.ChatSessionRepository
 import com.resume.core.application.dto.write.RunChatSessionCommand
+import com.resume.core.domain.model.ChatSession
 import com.resume.core.port.outbound.external.AiAgentPort
 import com.resume.core.port.outbound.external.AiAgentStreamEvent
+import com.resume.core.port.outbound.persistence.ChatSessionRepositoryPort
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
-import io.r2dbc.postgresql.codec.Json
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -31,7 +30,7 @@ import java.util.UUID
 class StreamChatSessionUseCaseServiceTest {
 
     private lateinit var agent: AiAgentPort
-    private lateinit var repository: ChatSessionRepository
+    private lateinit var repository: ChatSessionRepositoryPort
     private lateinit var useCase: StreamChatSessionUseCaseService
 
     private val factory = DefaultDataBufferFactory()
@@ -46,20 +45,20 @@ class StreamChatSessionUseCaseServiceTest {
     @Test
     fun `stream delegates to agent for text messages`() {
         val sessionId = UUID.randomUUID()
-        val entity = sampleEntity(sessionId)
+        val session = sampleSession(sessionId)
 
         val captured = slot<com.resume.core.application.dto.write.RunAgentSessionCommand>()
-        every { repository.findById(sessionId) } returns Mono.just(entity)
+        every { repository.findByIdAndUserId(sessionId, USER_ID) } returns Mono.just(session)
         every { agent.runSession(capture(captured)) } returns Flux.just(AiAgentStreamEvent(data = "ok"))
 
-        StepVerifier.create(useCase.stream(RunChatSessionCommand.text(sessionId, "Hello")))
+        StepVerifier.create(useCase.stream(RunChatSessionCommand.text(sessionId, USER_ID, "Hello")))
             .expectNext(AiAgentStreamEvent(data = "ok"))
             .verifyComplete()
 
         val command = captured.captured
-        assertThat(command.appName).isEqualTo(entity.appName)
-        assertThat(command.userId).isEqualTo(entity.userId)
-        assertThat(command.sessionId).isEqualTo(entity.agentSessionId)
+        assertThat(command.appName).isEqualTo(session.appName)
+        assertThat(command.userId).isEqualTo(session.userId)
+        assertThat(command.sessionId).isEqualTo(session.agentSessionId)
 
         val agentMessage = command.newMessage
         assertThat(agentMessage.role).isEqualTo("user")
@@ -71,16 +70,17 @@ class StreamChatSessionUseCaseServiceTest {
     @Test
     fun `stream maps function_response payload for HITL resume`() {
         val sessionId = UUID.randomUUID()
-        val entity = sampleEntity(sessionId)
+        val session = sampleSession(sessionId)
 
         val captured = slot<com.resume.core.application.dto.write.RunAgentSessionCommand>()
-        every { repository.findById(sessionId) } returns Mono.just(entity)
+        every { repository.findByIdAndUserId(sessionId, USER_ID) } returns Mono.just(session)
         every { agent.runSession(capture(captured)) } returns Flux.just(AiAgentStreamEvent(data = "ok"))
 
         StepVerifier.create(
             useCase.stream(
                 RunChatSessionCommand.functionResponse(
                     sessionId = sessionId,
+                    userId = USER_ID,
                     id = "iv_answer",
                     name = "adk_request_input",
                     result = "5년 경력입니다"
@@ -103,7 +103,7 @@ class StreamChatSessionUseCaseServiceTest {
     @Test
     fun `stream encodes file payloads as inline data`() {
         val sessionId = UUID.randomUUID()
-        val entity = sampleEntity(sessionId)
+        val session = sampleSession(sessionId)
         val fileBytes = "resume".toByteArray()
         val filePart = stubFilePart(
             filename = "resume.pdf",
@@ -112,13 +112,14 @@ class StreamChatSessionUseCaseServiceTest {
         )
 
         val captured = slot<com.resume.core.application.dto.write.RunAgentSessionCommand>()
-        every { repository.findById(sessionId) } returns Mono.just(entity)
+        every { repository.findByIdAndUserId(sessionId, USER_ID) } returns Mono.just(session)
         every { agent.runSession(capture(captured)) } returns Flux.just(AiAgentStreamEvent(event = "delta"))
 
         StepVerifier.create(
             useCase.stream(
                 RunChatSessionCommand.file(
                     sessionId = sessionId,
+                    userId = USER_ID,
                     displayName = "resume.pdf",
                     mimeType = MediaType.APPLICATION_PDF_VALUE,
                     part = filePart
@@ -139,9 +140,9 @@ class StreamChatSessionUseCaseServiceTest {
     @Test
     fun `stream fails when chat session does not exist`() {
         val sessionId = UUID.randomUUID()
-        every { repository.findById(sessionId) } returns Mono.empty<ChatSessionEntity>()
+        every { repository.findByIdAndUserId(sessionId, USER_ID) } returns Mono.empty<ChatSession>()
 
-        StepVerifier.create(useCase.stream(RunChatSessionCommand.text(sessionId, "Hi")))
+        StepVerifier.create(useCase.stream(RunChatSessionCommand.text(sessionId, USER_ID, "Hi")))
             .expectErrorSatisfies { error ->
                 assertThat(error).isInstanceOf(ResponseStatusException::class.java)
                 val ex = error as ResponseStatusException
@@ -156,19 +157,20 @@ class StreamChatSessionUseCaseServiceTest {
     @Test
     fun `stream rejects empty file payload`() {
         val sessionId = UUID.randomUUID()
-        val entity = sampleEntity(sessionId)
+        val session = sampleSession(sessionId)
         val filePart = stubFilePart(
             filename = "empty.pdf",
             mediaType = MediaType.APPLICATION_PDF,
             payloads = listOf(ByteArray(0))
         )
 
-        every { repository.findById(sessionId) } returns Mono.just(entity)
+        every { repository.findByIdAndUserId(sessionId, USER_ID) } returns Mono.just(session)
 
         StepVerifier.create(
             useCase.stream(
                 RunChatSessionCommand.file(
                     sessionId = sessionId,
+                    userId = USER_ID,
                     displayName = "empty.pdf",
                     mimeType = MediaType.APPLICATION_PDF_VALUE,
                     part = filePart
@@ -186,15 +188,15 @@ class StreamChatSessionUseCaseServiceTest {
         verify(exactly = 0) { agent.runSession(any()) }
     }
 
-    private fun sampleEntity(sessionId: UUID): ChatSessionEntity =
-        ChatSessionEntity(
+    private fun sampleSession(sessionId: UUID): ChatSession =
+        ChatSession(
             id = sessionId,
-            userId = "user-1",
+            userId = USER_ID,
             agentSessionId = "agent-123",
             appName = "resume-agent",
-            state = Json.of("{}"),
+            stateJson = "{}",
             purpose = "general",
-            status = "ACTIVE",
+            status = ChatSession.STATUS_ACTIVE,
             lastUpdateTime = 42.0,
             createdAt = Instant.parse("2024-01-01T00:00:00Z"),
             endedAt = null
@@ -221,5 +223,9 @@ class StreamChatSessionUseCaseServiceTest {
 
             override fun transferTo(dest: Path): Mono<Void> = Mono.empty()
         }
+    }
+
+    private companion object {
+        const val USER_ID = "user-1"
     }
 }
