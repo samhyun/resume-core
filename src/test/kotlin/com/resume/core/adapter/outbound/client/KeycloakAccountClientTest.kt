@@ -88,8 +88,8 @@ class KeycloakAccountClientTest {
         assertThat(post.getHeader("Authorization")).isEqualTo("Bearer tok")
         assertThat(post.getHeader("Content-Type")).contains("application/json")
         val body = jacksonObjectMapper().readTree(post.body.readUtf8())
-        assertThat(body.path("firstName").asText()).isEqualTo("새길동")
-        assertThat(body.path("lastName").asText()).isEqualTo("새홍")
+        assertThat(body.path("firstName").asString()).isEqualTo("새길동")
+        assertThat(body.path("lastName").asString()).isEqualTo("새홍")
         // read-only 메타는 POST 에서 제거됨
         assertThat(body.has("userProfileMetadata")).isFalse()
 

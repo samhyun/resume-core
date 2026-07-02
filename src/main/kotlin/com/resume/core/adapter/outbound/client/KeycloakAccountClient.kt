@@ -27,7 +27,7 @@ import reactor.core.publisher.Mono
 @Component
 class KeycloakAccountClient(
     builder: WebClient.Builder,
-    @param:Value("\${keycloak.realm-url:http://localhost:8080/realms/aura}") realmUrl: String
+    @Value("\${keycloak.realm-url:http://localhost:8080/realms/aura}") realmUrl: String
 ) : UserProfilePort {
 
     private val client = builder.baseUrl(realmUrl).build()
@@ -85,13 +85,13 @@ class KeycloakAccountClient(
     }
 
     private fun toUserProfile(node: JsonNode): UserProfile {
-        val username = node.path("username").asText().takeIf { it.isNotBlank() }
+        val username = node.path("username").asString().takeIf { it.isNotBlank() }
             ?: throw ResponseStatusException(HttpStatus.BAD_GATEWAY, "Keycloak account response missing username")
         return UserProfile(
             username = username,
-            email = node.path("email").asText().takeIf { it.isNotBlank() },
-            firstName = node.path("firstName").asText().takeIf { it.isNotBlank() },
-            lastName = node.path("lastName").asText().takeIf { it.isNotBlank() },
+            email = node.path("email").asString().takeIf { it.isNotBlank() },
+            firstName = node.path("firstName").asString().takeIf { it.isNotBlank() },
+            lastName = node.path("lastName").asString().takeIf { it.isNotBlank() },
             emailVerified = node.path("emailVerified").asBoolean(false)
         )
     }

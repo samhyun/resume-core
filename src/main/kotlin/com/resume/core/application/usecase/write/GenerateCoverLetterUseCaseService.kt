@@ -112,8 +112,8 @@ class GenerateCoverLetterUseCaseService(
     private fun requestInputIdOrNull(data: String): String? =
         try {
             val parts = mapper.readTree(data).path("content").path("parts")
-            parts.firstOrNull { it.path("functionCall").path("name").asText() == ADK_REQUEST_INPUT }
-                ?.path("functionCall")?.path("id")?.asText()?.takeIf { it.isNotBlank() }
+            parts.firstOrNull { it.path("functionCall").path("name").asString() == ADK_REQUEST_INPUT }
+                ?.path("functionCall")?.path("id")?.asString()?.takeIf { it.isNotBlank() }
         } catch (ex: Exception) {
             log.debug("Failed to parse ADK SSE event for request_input id: {}", ex.message)
             null

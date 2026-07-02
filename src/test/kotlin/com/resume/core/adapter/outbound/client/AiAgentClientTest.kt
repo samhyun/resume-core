@@ -80,7 +80,7 @@ class AiAgentClientTest {
 
         // ADK 2.0: 평면 state 주입(래퍼 없이). state.purpose 로 보내고 state.state 이중중첩이 아니어야 한다.
         val sentBody = jacksonObjectMapper().readTree(recorded.body.readUtf8())
-        assertThat(sentBody.path("purpose").asText()).isEqualTo("interview_prep")
+        assertThat(sentBody.path("purpose").asString()).isEqualTo("interview_prep")
         assertThat(sentBody.has("state")).isFalse()
     }
 
@@ -120,8 +120,8 @@ class AiAgentClientTest {
 
         val recorded = server.takeRequest()
         val sentBody = jacksonObjectMapper().readTree(recorded.body.readUtf8())
-        assertThat(sentBody.path("purpose").asText()).isEqualTo("general")
-        assertThat(sentBody.path("resume_data").asText()).isEqualTo("{\"name\":\"홍길동\"}")
+        assertThat(sentBody.path("purpose").asString()).isEqualTo("general")
+        assertThat(sentBody.path("resume_data").asString()).isEqualTo("{\"name\":\"홍길동\"}")
         assertThat(sentBody.has("state")).isFalse()
     }
 
@@ -181,13 +181,13 @@ class AiAgentClientTest {
         assertThat(recorded.path).isEqualTo("/run_sse")
         assertThat(recorded.getHeader("Content-Type")).isEqualTo("application/json")
         assertThat(recorded.getHeader("Accept")).isEqualTo("text/event-stream")
-        assertThat(json.path("appName").asText()).isEqualTo("resume-agent")
-        assertThat(json.path("userId").asText()).isEqualTo("user-1")
-        assertThat(json.path("sessionId").asText()).isEqualTo("agent-session")
+        assertThat(json.path("appName").asString()).isEqualTo("resume-agent")
+        assertThat(json.path("userId").asString()).isEqualTo("user-1")
+        assertThat(json.path("sessionId").asString()).isEqualTo("agent-session")
 
         val messageNode = json.path("newMessage")
-        assertThat(messageNode.path("role").asText()).isEqualTo("user")
-        assertThat(messageNode.path("parts")[0].path("text").asText()).isEqualTo("Hello")
+        assertThat(messageNode.path("role").asString()).isEqualTo("user")
+        assertThat(messageNode.path("parts")[0].path("text").asString()).isEqualTo("Hello")
     }
 
     @Test
@@ -224,9 +224,9 @@ class AiAgentClientTest {
 
         // function_response 단독 파트 — text 와 섞이면 안 됨.
         assertThat(part.has("text")).isFalse()
-        assertThat(part.path("functionResponse").path("id").asText()).isEqualTo("iv_answer")
-        assertThat(part.path("functionResponse").path("name").asText()).isEqualTo("adk_request_input")
-        assertThat(part.path("functionResponse").path("response").path("result").asText())
+        assertThat(part.path("functionResponse").path("id").asString()).isEqualTo("iv_answer")
+        assertThat(part.path("functionResponse").path("name").asString()).isEqualTo("adk_request_input")
+        assertThat(part.path("functionResponse").path("response").path("result").asString())
             .isEqualTo("5년 경력입니다")
     }
 }

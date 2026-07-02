@@ -29,10 +29,14 @@ class WkhtmlDocumentConversionAdapter(
 
             val htmlFile = Files.createTempFile("resume-html", ".html")
             val outputFile = Files.createTempFile("resume-out", ".${format.extension}")
+            // 프로세스 출력(stdout+stderr)을 파이프가 아니라 파일로 받는다.
+            // 파이프였다면 출력이 버퍼를 넘길 때 프로세스가 write 에서 블록돼 waitFor 가 타임아웃날 수 있다.
+            val logFile = Files.createTempFile("resume-log", ".txt")
             try {
                 Files.writeString(htmlFile, html, StandardCharsets.UTF_8)
 
-                val process = runConversion(htmlFile, outputFile, format)
+                val process = runConversion(htmlFile, outputFile, logFile, format)
+                process.outputStream.close() // stdin 미사용 — 프로세스가 입력 대기하지 않도록 닫는다
 
                 if (!process.waitFor(resumePdfProperties.timeoutSeconds, TimeUnit.SECONDS)) {
                     process.destroyForcibly()
@@ -43,7 +47,7 @@ class WkhtmlDocumentConversionAdapter(
 
                 val exitCode = process.exitValue()
                 if (exitCode != 0) {
-                    val errors = process.inputStream.use { it.readBytes().toString(StandardCharsets.UTF_8) }
+                    val errors = Files.readString(logFile, StandardCharsets.UTF_8).trim()
                     throw IllegalStateException("${binaryFor(format)} failed with exit code $exitCode: $errors")
                 }
 
@@ -56,6 +60,7 @@ class WkhtmlDocumentConversionAdapter(
             } finally {
                 Files.deleteIfExists(htmlFile)
                 Files.deleteIfExists(outputFile)
+                Files.deleteIfExists(logFile)
             }
         }.subscribeOn(Schedulers.boundedElastic())
 
@@ -65,7 +70,7 @@ class WkhtmlDocumentConversionAdapter(
         ResumeExportFormat.TXT -> throw IllegalArgumentException("TXT is not an HTML-based format")
     }
 
-    private fun runConversion(htmlFile: Path, outputFile: Path, format: ResumeExportFormat): Process {
+    private fun runConversion(htmlFile: Path, outputFile: Path, logFile: Path, format: ResumeExportFormat): Process {
         val command = buildList {
             add(binaryFor(format))
             when (format) {
@@ -95,6 +100,7 @@ class WkhtmlDocumentConversionAdapter(
 
         return ProcessBuilder(command)
             .redirectErrorStream(true)
+            .redirectOutput(ProcessBuilder.Redirect.to(logFile.toFile()))
             .start()
     }
 }

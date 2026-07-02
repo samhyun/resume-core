@@ -58,8 +58,13 @@ unique=$(uuidgen 2>/dev/null || date +%s%N)
 container_input="$CONTAINER_DIR/${unique}.html"
 container_output="$CONTAINER_DIR/${unique}.pdf"
 
+# 변환 실패(set -e)로 중단돼도 컨테이너 임시 파일이 누적되지 않도록 EXIT 시 정리한다.
+cleanup() {
+  compose exec -T "$SERVICE" sh -c "rm -f '$container_input' '$container_output'" 2>/dev/null || true
+}
+trap cleanup EXIT
+
 compose exec -T "$SERVICE" sh -c "mkdir -p '$CONTAINER_DIR'"
 compose cp "$input_abs" "$SERVICE:$container_input"
 compose exec -T "$SERVICE" wkhtmltopdf "${options[@]}" "$container_input" "$container_output"
 compose cp "$SERVICE:$container_output" "$output_abs"
-compose exec -T "$SERVICE" sh -c "rm -f '$container_input' '$container_output'"
