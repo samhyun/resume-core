@@ -27,6 +27,7 @@ class SecurityConfig {
         jwtAuthConverter: Converter<Jwt, Mono<AbstractAuthenticationToken>>,
     ): SecurityWebFilterChain =
         http
+            // 무상태 Bearer 토큰 API — 세션 쿠키를 쓰지 않으므로 CSRF 보호가 불필요하다.
             .csrf { it.disable() }
             .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
             .authorizeExchange {

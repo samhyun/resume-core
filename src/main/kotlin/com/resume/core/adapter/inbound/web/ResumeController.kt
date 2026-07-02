@@ -16,6 +16,7 @@ import com.resume.core.application.usecase.write.SaveResumeUseCase
 import com.resume.core.application.usecase.write.UpdateResumeUseCase
 import com.resume.core.application.usecase.write.DeleteResumeUseCase
 import com.resume.core.adapter.inbound.web.support.ReactiveJwtAuthenticationFacade
+import com.resume.core.adapter.inbound.web.support.toUuidOrBadRequest
 import com.resume.core.domain.model.ResumeExportFormat
 import com.resume.core.domain.model.ResumeTemplateType
 import com.resume.core.application.dto.write.DeleteResumeCommand
@@ -23,10 +24,18 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.*
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Mono
-import java.util.UUID
 
 /**
  * REST controller for resume operations
@@ -85,7 +94,7 @@ class ResumeController(
         @PathVariable resumeId: String,
         @RequestBody request: SaveResumeRequest
     ): Mono<UpdateResumeResponse> {
-        val uuid = resumeId.toUuidOrBadRequest()
+        val uuid = resumeId.toUuidOrBadRequest("resumeId")
 
         return authenticationFacade.currentUserId()
             .flatMap { userId ->
@@ -103,7 +112,7 @@ class ResumeController(
     fun getResume(
         @PathVariable resumeId: String
     ): Mono<GetResumeResponse> {
-        val uuid = resumeId.toUuidOrBadRequest()
+        val uuid = resumeId.toUuidOrBadRequest("resumeId")
 
         return authenticationFacade.currentUserId()
             .flatMap { userId ->
@@ -177,7 +186,7 @@ class ResumeController(
         template: String,
         format: ResumeExportFormat
     ): Mono<ResponseEntity<ByteArray>> {
-        val uuid = resumeId.toUuidOrBadRequest()
+        val uuid = resumeId.toUuidOrBadRequest("resumeId")
         val templateType = ResumeTemplateType.fromValue(template)
 
         return authenticationFacade.currentUserId()
@@ -210,7 +219,7 @@ class ResumeController(
     fun deleteResume(
         @PathVariable resumeId: String
     ): Mono<Unit> {
-        val uuid = resumeId.toUuidOrBadRequest()
+        val uuid = resumeId.toUuidOrBadRequest("resumeId")
 
         return authenticationFacade.currentUserId()
             .flatMap { userId ->
@@ -218,28 +227,4 @@ class ResumeController(
             }
     }
 
-    /**
-     * Extract user ID from JWT token
-     * Uses 'sub' claim as the user identifier
-     */
-    /**
-     * Convert string to UUID with validation
-     */
-    private fun String.toUuidOrBadRequest(): UUID {
-        val trimmed = trim()
-        if (trimmed.isEmpty()) {
-            throw ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "Resume ID must not be blank"
-            )
-        }
-        return try {
-            UUID.fromString(trimmed)
-        } catch (ex: IllegalArgumentException) {
-            throw ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "Invalid resume ID format"
-            )
-        }
-    }
 }

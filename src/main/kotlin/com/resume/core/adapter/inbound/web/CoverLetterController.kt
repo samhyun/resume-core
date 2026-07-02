@@ -4,6 +4,7 @@ import com.resume.core.adapter.inbound.web.model.CoverLetterResponse
 import com.resume.core.adapter.inbound.web.model.GenerateCoverLetterRequest
 import com.resume.core.adapter.inbound.web.model.SaveCoverLetterRequest
 import com.resume.core.adapter.inbound.web.support.ReactiveJwtAuthenticationFacade
+import com.resume.core.adapter.inbound.web.support.toUuidOrBadRequest
 import com.resume.core.application.dto.read.GetCoverLetterQuery
 import com.resume.core.application.dto.read.ListCoverLettersQuery
 import com.resume.core.application.dto.write.DeleteCoverLetterCommand
@@ -30,7 +31,6 @@ import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Duration
-import java.util.UUID
 
 /**
  * REST controller for cover letter CRUD. All operations are scoped to the authenticated user.
@@ -109,17 +109,5 @@ class CoverLetterController(
         comment?.let(builder::comment)
         data?.let(builder::data)
         return builder.build()
-    }
-
-    private fun String.toUuidOrBadRequest(): UUID {
-        val trimmed = trim()
-        if (trimmed.isEmpty()) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "id must not be blank")
-        }
-        return try {
-            UUID.fromString(trimmed)
-        } catch (ex: IllegalArgumentException) {
-            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid id format")
-        }
     }
 }
