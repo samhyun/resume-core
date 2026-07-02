@@ -1,4 +1,4 @@
-# Resume Core
+# Resume Core — AI 이력서·면접 중개 백엔드
 
 Resume Core는 사용자와 외부 AI 에이전트 사이에서 중개자 역할을 하는 리액티브 백엔드입니다. 사용자의 채팅 요청을 AI 에이전트로 넘기고 그 응답을 실시간으로 되돌려줍니다. 이 과정에서 오간 이력서·자기소개서 데이터를 저장하고 PDF 같은 문서로 뽑아냅니다.
 
@@ -92,10 +92,10 @@ src/main/kotlin/com/resume/core
 ```
 
 ### 설계 원칙
-- **의존성 역전**: 유스케이스는 포트(인터페이스)에 의존하고, 어댑터가 포트를 구현한다.
-- **리액티브 스트림**: 모든 연산은 `Mono<T>` / `Flux<T>` 를 반환하며 절대 블로킹하지 않는다.
-- **포트 명명**: 구현이 아닌 역량을 표현한다 (예: `AiAgentPort`, `ChatSessionRepositoryPort`).
-- **세션 생명주기**: 새 세션을 만들면 해당 사용자의 기존 ACTIVE 세션을 닫는다.
+- **의존성 역전**: 유스케이스는 포트(인터페이스)에 의존하고, 어댑터가 포트를 구현합니다.
+- **리액티브 스트림**: 모든 연산은 `Mono<T>` / `Flux<T>` 를 반환하며 절대 블로킹하지 않습니다.
+- **포트 명명**: 구현이 아닌 역량을 표현합니다 (예: `AiAgentPort`, `ChatSessionRepositoryPort`).
+- **세션 생명주기**: 새 세션을 만들면 해당 사용자의 기존 ACTIVE 세션을 닫습니다.
 
 ## 요청 흐름
 
@@ -179,10 +179,10 @@ WKHTMLTOPDF_PATH=./scripts/wkhtmltopdf.sh ./gradlew bootRun
 
 | 대상 | 방식 | 도구 |
 | --- | --- | --- |
-| 컨트롤러 (adapter/inbound) | 슬라이스 테스트로 요청·응답·상태 코드를 검증한다. 유스케이스와 인증은 목으로 대체한다 | `@WebFluxTest`, WebTestClient, MockitoBean |
-| 유스케이스 (application) | 스프링 컨텍스트 없이 순수 단위로 검증한다. 포트를 목으로 주입한다 | MockK, StepVerifier |
-| 영속화 어댑터 (adapter/outbound/persistence) | 실제 PostgreSQL 컨테이너를 띄워 쿼리와 사용자 소유권 격리를 검증한다 | Testcontainers |
-| 외부 HTTP 클라이언트 | 목 서버로 AI 에이전트·Keycloak 응답을 흉내 낸다 | MockWebServer |
+| 컨트롤러 (adapter/inbound) | 슬라이스 테스트로 요청·응답·상태 코드를 검증합니다. 유스케이스와 인증은 목으로 대체합니다 | `@WebFluxTest`, WebTestClient, MockitoBean |
+| 유스케이스 (application) | 스프링 컨텍스트 없이 순수 단위로 검증합니다. 포트를 목으로 주입합니다 | MockK, StepVerifier |
+| 영속화 어댑터 (adapter/outbound/persistence) | 실제 PostgreSQL 컨테이너를 띄워 쿼리와 사용자 소유권 격리를 검증합니다 | Testcontainers |
+| 외부 HTTP 클라이언트 | 목 서버로 AI 에이전트·Keycloak 응답을 흉내 냅니다 | MockWebServer |
 
 - **리액티브 검증**: `Mono`/`Flux` 결과는 `reactor-test`의 `StepVerifier`로 방출 값과 에러를 단언합니다. 프로덕션 코드에서는 `.block()`을 쓰지 않고 테스트 단언에서만 허용합니다.
 - **인증 목**: 컨트롤러 테스트는 `MockJwtWebFilter` / `MockJwtFactory`로 JWT를 주입해 인증된 사용자 흐름을 재현합니다.
