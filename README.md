@@ -1,5 +1,13 @@
 # Resume Core — AI 이력서·면접 중개 백엔드
 
+![Kotlin](https://img.shields.io/badge/Kotlin%202.3-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)
+![JDK](https://img.shields.io/badge/JDK%2025-437291?style=for-the-badge&logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot%204.0-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
+![Project Reactor](https://img.shields.io/badge/Project%20Reactor-B7178C?style=for-the-badge&logo=reactivex&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Gradle](https://img.shields.io/badge/Gradle-02303A?style=for-the-badge&logo=gradle&logoColor=white)
+![Keycloak](https://img.shields.io/badge/Keycloak-4D4D4D?style=for-the-badge&logo=keycloak&logoColor=white)
+
 Resume Core는 사용자와 외부 AI 에이전트 사이에서 중개자 역할을 하는 리액티브 백엔드입니다. 사용자의 채팅 요청을 AI 에이전트로 넘기고 그 응답을 실시간으로 되돌려줍니다. 이 과정에서 오간 이력서·자기소개서 데이터를 저장하고 PDF 같은 문서로 뽑아냅니다.
 
 전 구간이 논블로킹(Spring WebFlux + R2DBC)으로 동작하며 인증은 Keycloak이 발급한 JWT로 처리합니다. 코드는 클린 아키텍처(헥사고날)를 따라 **유스케이스 → 포트 → 어댑터** 순서로 의존하도록 구성했습니다. 비즈니스 로직이 인터페이스(포트)에만 의존하므로 외부 시스템을 갈아끼워도 유스케이스는 건드릴 필요가 없습니다.
