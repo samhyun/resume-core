@@ -38,36 +38,36 @@ Resume Core는 사용자와 외부 AI 에이전트 사이에서 중개자 역할
 포트와 어댑터가 만드는 경계는 다음과 같습니다. 화살표 방향이 곧 의존성 방향입니다. 포트(인터페이스)와 그 구현인 어댑터 사이는 점선으로 표시했습니다.
 
 ```mermaid
-graph LR
+graph TB
     Client["웹 클라이언트"]
 
-    subgraph inbound["인바운드 어댑터 · adapter/inbound/web"]
-        Ctrl["Chat / Resume<br/>CoverLetter / Profile<br/>Controller"]
+    subgraph inbound["인바운드 어댑터"]
+        Ctrl["Controllers<br/>Chat · Resume · CoverLetter · Profile"]
     end
 
-    subgraph app["애플리케이션 · application/usecase"]
-        UC["UseCases<br/>(read · write)"]
+    subgraph app["애플리케이션"]
+        UC["UseCases · read / write"]
     end
 
-    subgraph ports["아웃바운드 포트 · port/outbound"]
-        direction TB
+    subgraph ports["아웃바운드 포트"]
+        direction LR
         AP["AiAgentPort"]
-        RP["Repository Ports"]
-        DP["TemplateRenderer ·<br/>DocumentConversion Port"]
+        RP["Repository<br/>Ports"]
+        DP["Renderer ·<br/>Conversion Port"]
         UP["UserProfilePort"]
     end
 
-    subgraph outbound["아웃바운드 어댑터 · adapter/outbound"]
-        direction TB
+    subgraph outbound["아웃바운드 어댑터"]
+        direction LR
         AC["AiAgentClient"]
-        R2["R2DBC Repositories"]
-        RD["Thymeleaf · wkhtmltopdf"]
+        R2["R2DBC<br/>Repositories"]
+        RD["Thymeleaf ·<br/>wkhtmltopdf"]
         KC["KeycloakAccountClient"]
     end
 
     subgraph ext["외부 시스템"]
-        direction TB
-        E1["AI 에이전트 (ADK)"]
+        direction LR
+        E1["AI 에이전트<br/>(ADK)"]
         E2[("PostgreSQL")]
         E3["Keycloak"]
     end
