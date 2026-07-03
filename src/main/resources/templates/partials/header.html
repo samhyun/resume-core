@@ -1,0 +1,10 @@
+<div th:fragment="header" class="resume-header" xmlns:th="http://www.thymeleaf.org">
+    <h1 th:text="${resume.resumeData.name != null && resume.resumeData.name != '' ? resume.resumeData.name : resume.resumeData.summary.headline}">Headline</h1>
+    <p class="profile-line"
+       th:if="${resume.resumeData.name != null && resume.resumeData.name != '' && resume.resumeData.summary.headline != null && resume.resumeData.summary.headline != ''}"
+       th:text="${resume.resumeData.summary.headline}">Headline</p>
+    <p class="profile-line" th:if="${resume.resumeData.email != null && resume.resumeData.email != ''}" th:text="${resume.resumeData.email}">email@example.com</p>
+    <p class="profile-line" th:if="${resume.resumeData.phone != null && resume.resumeData.phone != ''}" th:text="${resume.resumeData.phone}">000-0000-0000</p>
+    <p class="profile-line" th:if="${resume.resumeData.address != null && resume.resumeData.address != ''}" th:text="${resume.resumeData.address}">Address</p>
+    <p class="profile-line" th:each="line : ${resume.resumeData.summary.profile}" th:text="${line}">Profile line</p>
+</div>

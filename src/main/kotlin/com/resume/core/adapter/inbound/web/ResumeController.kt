@@ -7,17 +7,35 @@ import com.resume.core.adapter.inbound.web.model.UpdateResumeResponse
 import com.resume.core.application.dto.read.GetActiveResumeQuery
 import com.resume.core.application.dto.read.GetResumeQuery
 import com.resume.core.application.dto.read.ListResumesQuery
+import com.resume.core.application.dto.read.GenerateResumeExportQuery
 import com.resume.core.application.usecase.read.GetActiveResumeUseCase
 import com.resume.core.application.usecase.read.GetResumeUseCase
 import com.resume.core.application.usecase.read.ListResumesUseCase
+import com.resume.core.application.usecase.read.GenerateResumeExportUseCase
 import com.resume.core.application.usecase.write.SaveResumeUseCase
 import com.resume.core.application.usecase.write.UpdateResumeUseCase
+import com.resume.core.application.usecase.write.DeleteResumeUseCase
 import com.resume.core.adapter.inbound.web.support.ReactiveJwtAuthenticationFacade
+import com.resume.core.adapter.inbound.web.support.toUuidOrBadRequest
+import com.resume.core.domain.model.ResumeExportFormat
+import com.resume.core.domain.model.ResumeTemplateType
+import com.resume.core.application.dto.write.DeleteResumeCommand
 import org.springframework.http.HttpStatus
-import org.springframework.web.bind.annotation.*
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.server.ResponseStatusException
 import reactor.core.publisher.Mono
-import java.util.UUID
 
 /**
  * REST controller for resume operations
@@ -31,6 +49,8 @@ class ResumeController(
     private val getResumeUseCase: GetResumeUseCase,
     private val getActiveResumeUseCase: GetActiveResumeUseCase,
     private val listResumesUseCase: ListResumesUseCase,
+    private val deleteResumeUseCase: DeleteResumeUseCase,
+    private val generateResumeExportUseCase: GenerateResumeExportUseCase,
     private val authenticationFacade: ReactiveJwtAuthenticationFacade
 ) {
 
@@ -74,7 +94,7 @@ class ResumeController(
         @PathVariable resumeId: String,
         @RequestBody request: SaveResumeRequest
     ): Mono<UpdateResumeResponse> {
-        val uuid = resumeId.toUuidOrBadRequest()
+        val uuid = resumeId.toUuidOrBadRequest("resumeId")
 
         return authenticationFacade.currentUserId()
             .flatMap { userId ->
@@ -92,7 +112,7 @@ class ResumeController(
     fun getResume(
         @PathVariable resumeId: String
     ): Mono<GetResumeResponse> {
-        val uuid = resumeId.toUuidOrBadRequest()
+        val uuid = resumeId.toUuidOrBadRequest("resumeId")
 
         return authenticationFacade.currentUserId()
             .flatMap { userId ->
@@ -132,27 +152,79 @@ class ResumeController(
     }
 
     /**
-     * Extract user ID from JWT token
-     * Uses 'sub' claim as the user identifier
+     * Download the resume as a PDF generated from the selected template.
+     *
+     * Kept for backward compatibility; equivalent to `/export?format=pdf`.
      */
+    @GetMapping("/{resumeId}/pdf")
+    fun downloadResumePdf(
+        @PathVariable resumeId: String,
+        @RequestParam(name = "template", defaultValue = "default") template: String
+    ): Mono<ResponseEntity<ByteArray>> =
+        export(resumeId, template, ResumeExportFormat.PDF)
+
     /**
-     * Convert string to UUID with validation
+     * Export the resume in the requested format (pdf | png | txt) from the selected template.
+     * `template` is ignored for txt.
      */
-    private fun String.toUuidOrBadRequest(): UUID {
-        val trimmed = trim()
-        if (trimmed.isEmpty()) {
-            throw ResponseStatusException(
+    @GetMapping("/{resumeId}/export")
+    fun exportResume(
+        @PathVariable resumeId: String,
+        @RequestParam(name = "format", defaultValue = "pdf") format: String,
+        @RequestParam(name = "template", defaultValue = "default") template: String
+    ): Mono<ResponseEntity<ByteArray>> {
+        val exportFormat = ResumeExportFormat.from(format)
+            ?: throw ResponseStatusException(
                 HttpStatus.BAD_REQUEST,
-                "Resume ID must not be blank"
+                "Unsupported export format: $format"
             )
-        }
-        return try {
-            UUID.fromString(trimmed)
-        } catch (ex: IllegalArgumentException) {
-            throw ResponseStatusException(
-                HttpStatus.BAD_REQUEST,
-                "Invalid resume ID format"
-            )
-        }
+        return export(resumeId, template, exportFormat)
     }
+
+    private fun export(
+        resumeId: String,
+        template: String,
+        format: ResumeExportFormat
+    ): Mono<ResponseEntity<ByteArray>> {
+        val uuid = resumeId.toUuidOrBadRequest("resumeId")
+        val templateType = ResumeTemplateType.fromValue(template)
+
+        return authenticationFacade.currentUserId()
+            .flatMap { userId ->
+                generateResumeExportUseCase.handle(
+                    GenerateResumeExportQuery(
+                        resumeId = uuid,
+                        userId = userId,
+                        templateType = templateType,
+                        format = format
+                    )
+                )
+            }
+            .map { result ->
+                ResponseEntity.ok()
+                    .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"${result.fileName}\""
+                    )
+                    .contentType(MediaType.parseMediaType(result.contentType))
+                    .body(result.bytes)
+            }
+    }
+
+    /**
+     * Delete a resume owned by the authenticated user
+     */
+    @DeleteMapping("/{resumeId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteResume(
+        @PathVariable resumeId: String
+    ): Mono<Unit> {
+        val uuid = resumeId.toUuidOrBadRequest("resumeId")
+
+        return authenticationFacade.currentUserId()
+            .flatMap { userId ->
+                deleteResumeUseCase.handle(DeleteResumeCommand(uuid, userId))
+            }
+    }
+
 }

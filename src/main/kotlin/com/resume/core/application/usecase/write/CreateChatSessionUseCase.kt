@@ -5,6 +5,6 @@ import com.resume.core.application.dto.write.CreateSessionCommand
 import reactor.core.publisher.Mono
 
 fun interface CreateChatSessionUseCase {
-    fun handle(req: CreateSessionCommand): Mono<CreateChatSessionResult>
+    fun handle(command: CreateSessionCommand): Mono<CreateChatSessionResult>
 }
 

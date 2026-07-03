@@ -49,4 +49,9 @@ interface ResumeRepositoryPort {
      * Check if a resume exists for the given ID and user
      */
     fun existsByIdAndUserId(resumeId: UUID, userId: String): Mono<Boolean>
+
+    /**
+     * Delete a resume by ID scoped to the given user
+     */
+    fun deleteByIdAndUserId(resumeId: UUID, userId: String): Mono<Unit>
 }

@@ -8,5 +8,5 @@ data class CreateChatSessionResult(
     val appName: String,
     val userId: String,
     val purpose: String?,
-    val status: String = "ACTIVE"
+    val status: String,
 )

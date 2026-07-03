@@ -1,24 +1,24 @@
 package com.resume.core.adapter.outbound.persistence.command.repository
 
 import com.resume.core.config.R2dbcTxConfig
+import io.r2dbc.postgresql.codec.Json
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.data.r2dbc.DataR2dbcTest
+import org.springframework.boot.data.r2dbc.test.autoconfigure.DataR2dbcTest
 import org.springframework.context.annotation.Import
-import io.r2dbc.postgresql.codec.Json
 import org.springframework.r2dbc.core.DatabaseClient
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
+import org.testcontainers.junit.jupiter.Container
+import org.testcontainers.junit.jupiter.Testcontainers
+import org.testcontainers.postgresql.PostgreSQLContainer
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
-import org.testcontainers.containers.PostgreSQLContainer
-import org.testcontainers.junit.jupiter.Container
-import org.testcontainers.junit.jupiter.Testcontainers
 
 @DataR2dbcTest
 @Import(R2dbcTxConfig::class)
@@ -32,7 +32,7 @@ class ChatSessionRepositoryTest @Autowired constructor(
     companion object {
         @Container
         @JvmStatic
-        private val postgres = PostgreSQLContainer<Nothing>("postgres:16-alpine").apply {
+        private val postgres = PostgreSQLContainer("postgres:16-alpine").apply {
             withDatabaseName("resume_test")
             withUsername("tester")
             withPassword("secret")
@@ -45,7 +45,7 @@ class ChatSessionRepositoryTest @Autowired constructor(
                 postgres.start()
             }
             registry.add("spring.r2dbc.url") {
-                "r2dbc:postgresql://${postgres.host}:${postgres.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT)}/${postgres.databaseName}"
+                "r2dbc:postgresql://${postgres.host}:${postgres.firstMappedPort}/${postgres.databaseName}"
             }
             registry.add("spring.r2dbc.username") { postgres.username }
             registry.add("spring.r2dbc.password") { postgres.password }
@@ -90,7 +90,7 @@ class ChatSessionRepositoryTest @Autowired constructor(
 
         val status = databaseClient.sql("SELECT status FROM chat_session WHERE user_id = :userId")
             .bind("userId", "user-1")
-            .map { row, _ -> row.get("status", String::class.java) }
+            .mapValue(String::class.java)
             .one()
             .block()
 

@@ -1,20 +1,22 @@
 package com.resume.core.adapter.inbound.web
 
 import com.resume.core.application.dto.write.ChatMessagePayload
+import com.resume.core.application.dto.write.CreateChatSessionResult
+import com.resume.core.application.dto.write.CreateSessionCommand
 import com.resume.core.application.dto.write.RunChatSessionCommand
+import com.resume.core.adapter.inbound.web.support.ReactiveJwtAuthenticationFacade
 import com.resume.core.application.usecase.read.StreamChatSessionUseCase
 import com.resume.core.application.usecase.write.CreateChatSessionUseCase
 import com.resume.core.port.outbound.external.AiAgentStreamEvent
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.verify
 import org.mockito.BDDMockito.given
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.autoconfigure.security.oauth2.client.reactive.ReactiveOAuth2ClientAutoConfiguration
-import org.springframework.boot.autoconfigure.security.oauth2.resource.reactive.ReactiveOAuth2ResourceServerAutoConfiguration
-import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest
+import org.springframework.boot.webflux.test.autoconfigure.WebFluxTest
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -30,16 +32,11 @@ import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.reactive.function.BodyInserters
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import java.time.Duration
 import java.util.UUID
 
-@WebFluxTest(
-    controllers = [ChatController::class],
-    excludeAutoConfiguration = [
-        ReactiveOAuth2ClientAutoConfiguration::class,
-        ReactiveOAuth2ResourceServerAutoConfiguration::class
-    ]
-)
+@WebFluxTest(controllers = [ChatController::class])
 @ContextConfiguration(classes = [ChatController::class, ChatControllerTests.TestSecurityConfig::class])
 class ChatControllerTests {
 
@@ -62,6 +59,15 @@ class ChatControllerTests {
 
     @MockitoBean
     lateinit var streamChatSessionUseCase: StreamChatSessionUseCase
+
+    @MockitoBean
+    lateinit var authenticationFacade: ReactiveJwtAuthenticationFacade
+
+    @BeforeEach
+    fun setUpAuth() {
+        // 컨트롤러가 JWT sub에서 userId를 파생하므로, 인증 사용자를 고정값으로 스텁한다.
+        given(authenticationFacade.currentUserId()).willReturn(Mono.just(AUTH_USER_ID))
+    }
 
     @Test
     fun `runSseMultipart accepts file and streams events`() {
@@ -145,10 +151,161 @@ class ChatControllerTests {
         assertThat(payload.text).isEqualTo("JSON 메시지입니다")
     }
 
+    @Test
+    fun `runSseJson accepts function_response resume`() {
+        val events = Flux.just(
+            AiAgentStreamEvent(id = "evt-1", data = "{\"text\":\"다음 질문\"}"),
+            AiAgentStreamEvent(event = "end")
+        )
+        given(streamChatSessionUseCase.stream(any())).willReturn(events)
+
+        val sessionId = UUID.randomUUID()
+        val request = mapOf(
+            "sessionId" to sessionId.toString(),
+            "functionResponse" to mapOf(
+                "id" to "iv_answer",
+                "result" to "5년 경력입니다"
+            )
+        )
+
+        val result = webTestClient.post()
+            .uri("/api/resume-core/chats/run-sse")
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.TEXT_EVENT_STREAM)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isOk
+            .expectHeader().contentTypeCompatibleWith(MediaType.TEXT_EVENT_STREAM)
+            .returnResult(object : ParameterizedTypeReference<ServerSentEvent<String>>() {})
+
+        val responseEvents = result.responseBody.collectList().block(Duration.ofSeconds(1))
+        assertThat(responseEvents).isNotNull
+        assertThat(responseEvents!!).hasSize(2)
+
+        val captor = argumentCaptor<RunChatSessionCommand>()
+        verify(streamChatSessionUseCase).stream(captor.capture())
+        val payload = captor.firstValue.message as ChatMessagePayload.FunctionResponse
+        assertThat(payload.id).isEqualTo("iv_answer")
+        // name 미지정 시 기본값 적용
+        assertThat(payload.name).isEqualTo("adk_request_input")
+        assertThat(payload.result).isEqualTo("5년 경력입니다")
+    }
+
+    @Test
+    fun `runSseJson rejects request with neither text nor functionResponse`() {
+        val sessionId = UUID.randomUUID()
+        val request = mapOf("sessionId" to sessionId.toString())
+
+        webTestClient.post()
+            .uri("/api/resume-core/chats/run-sse")
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.TEXT_EVENT_STREAM)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isBadRequest
+    }
+
+    @Test
+    fun `runSseJson rejects request with both text and functionResponse`() {
+        val sessionId = UUID.randomUUID()
+        val request = mapOf(
+            "sessionId" to sessionId.toString(),
+            "text" to "텍스트도 보냄",
+            "functionResponse" to mapOf(
+                "id" to "iv_answer",
+                "result" to "5년 경력입니다"
+            )
+        )
+
+        webTestClient.post()
+            .uri("/api/resume-core/chats/run-sse")
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.TEXT_EVENT_STREAM)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isBadRequest
+    }
+
+    @Test
+    fun `runSseJson rejects functionResponse with blank name`() {
+        val sessionId = UUID.randomUUID()
+        val request = mapOf(
+            "sessionId" to sessionId.toString(),
+            "functionResponse" to mapOf(
+                "id" to "iv_answer",
+                "name" to "",
+                "result" to "5년 경력입니다"
+            )
+        )
+
+        webTestClient.post()
+            .uri("/api/resume-core/chats/run-sse")
+            .contentType(MediaType.APPLICATION_JSON)
+            .accept(MediaType.TEXT_EVENT_STREAM)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isBadRequest
+    }
+
+    @Test
+    fun `create session forwards resumeData to command`() {
+        given(createChatSessionUseCase.handle(any())).willReturn(
+            Mono.just(
+                CreateChatSessionResult(
+                    sessionId = UUID.randomUUID(),
+                    agentSessionId = "ext-1",
+                    appName = "cover_letter",
+                    userId = "user-1",
+                    purpose = "general",
+                    status = "ACTIVE"
+                )
+            )
+        )
+
+        val request = mapOf(
+            "appName" to "cover_letter",
+            "resumeData" to "{\"name\":\"홍길동\"}"
+        )
+
+        webTestClient.post()
+            .uri("/api/resume-core/chats/sessions")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isCreated
+
+        val captor = argumentCaptor<CreateSessionCommand>()
+        verify(createChatSessionUseCase).handle(captor.capture())
+        val command = captor.firstValue
+        assertThat(command.ids.appName).isEqualTo("cover_letter")
+        // userId는 요청 본문이 아니라 인증된 JWT(sub)에서 채워진다.
+        assertThat(command.ids.userId).isEqualTo(AUTH_USER_ID)
+        assertThat(command.resumeData).isEqualTo("{\"name\":\"홍길동\"}")
+    }
+
+    @Test
+    fun `create session rejects blank resumeData`() {
+        val request = mapOf(
+            "appName" to "cover_letter",
+            "resumeData" to "   "
+        )
+
+        webTestClient.post()
+            .uri("/api/resume-core/chats/sessions")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isBadRequest
+    }
+
     private class NamedByteArrayResource(
         private val bytes: ByteArray,
         private val filename: String
     ) : ByteArrayResource(bytes) {
         override fun getFilename(): String = filename
+    }
+
+    private companion object {
+        const val AUTH_USER_ID = "auth-user-1"
     }
 }

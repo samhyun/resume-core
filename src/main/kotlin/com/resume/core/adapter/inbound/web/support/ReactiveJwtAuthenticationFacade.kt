@@ -33,4 +33,11 @@ class ReactiveJwtAuthenticationFacade {
                 jwt.subject?.takeIf { it.isNotBlank() }
                     ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "User ID not found in token")
             }
+
+    /**
+     * The raw access-token string of the current request — forwarded to downstream identity-provider
+     * calls (e.g. the Keycloak Account API) so they act as the authenticated user.
+     */
+    fun currentToken(): Mono<String> =
+        currentJwt().map { it.tokenValue }
 }
