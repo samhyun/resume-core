@@ -134,6 +134,9 @@ class GenerateCoverLetterUseCaseService(
         private const val TRIGGER_MESSAGE = "자기소개서 작성해줘"
 
         // 이벤트 간 최대 공백(LLM 노드 한 홉) 상한 — 초과 시 행으로 보고 스트림 종료.
-        private val IDLE_TIMEOUT: Duration = Duration.ofSeconds(60)
+        // 60초로 두면 모델 응답이 느린 시간대에 정상 생성까지 끊긴다(한 홉이 60초를 넘는 경우가 있음).
+        // 행 감지 목적은 유지하되 여유를 둔다. 환경변수로 덮어쓸 수 있다.
+        private val IDLE_TIMEOUT: Duration =
+            Duration.ofSeconds(System.getenv("COVER_LETTER_IDLE_TIMEOUT_SECONDS")?.toLongOrNull() ?: 180)
     }
 }
