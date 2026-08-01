@@ -136,7 +136,10 @@ class GenerateCoverLetterUseCaseService(
         // 이벤트 간 최대 공백(LLM 노드 한 홉) 상한 — 초과 시 행으로 보고 스트림 종료.
         // 60초로 두면 모델 응답이 느린 시간대에 정상 생성까지 끊긴다(한 홉이 60초를 넘는 경우가 있음).
         // 행 감지 목적은 유지하되 여유를 둔다. 환경변수로 덮어쓸 수 있다.
+        // 0이나 음수는 스트림을 즉시 끊어 기능을 통째로 막으므로 양수만 받고, 그 외에는 기본값을 쓴다.
         private val IDLE_TIMEOUT: Duration =
-            Duration.ofSeconds(System.getenv("COVER_LETTER_IDLE_TIMEOUT_SECONDS")?.toLongOrNull() ?: 180)
+            Duration.ofSeconds(
+                System.getenv("COVER_LETTER_IDLE_TIMEOUT_SECONDS")?.toLongOrNull()?.takeIf { it > 0 } ?: 180
+            )
     }
 }
