@@ -1,6 +1,7 @@
 package com.resume.core.adapter.inbound.web.model
 
 import com.fasterxml.jackson.annotation.JsonAlias
+import com.fasterxml.jackson.annotation.JsonCreator
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.resume.core.application.dto.write.SaveResumeCommand
 import com.resume.core.application.dto.write.SaveResumeResult
@@ -567,7 +568,137 @@ data class ResumeLinkDto(
     fun toDomain(): ResumeLink = ResumeLink(demo, repo, github, website)
 
     companion object {
+        private const val GITHUB_HOST = "github.com"
+
+        /** github.com 외에 저장소 URL로 볼 수 있는 호스트 목록. `repo` 슬롯 판별에 쓴다. */
+        private val REPO_HOSTS = listOf("gitlab.com", "bitbucket.org", "gitee.com", "codeberg.org", "sourceforge.net")
+
         fun from(domain: ResumeLink): ResumeLinkDto =
             ResumeLinkDto(domain.demo, domain.repo, domain.github, domain.website)
+
+        /**
+         * URL 문자열에서 호스트만 잘라내 소문자로 돌려준다.
+         *
+         * `java.net.URI`는 스킴이 없는 `github.com/user/repo`에서 host를 null로 주고 형태가 깨진
+         * 문자열에는 예외를 던진다. 배열로 들어온 링크는 애초에 규격 밖 입력이라 그런 값이 섞일 수
+         * 있으므로, 파싱 대신 스킴(`://`) → 경로·쿼리·프래그먼트 → userinfo(`@`) → 포트(`:`) 순으로
+         * 직접 떼어내고 선행 `www.`도 지운다. 어떤 입력에도 예외를 던지지 않는다.
+         *
+         * 잘라내기 전 `\`는 `/`로 정규화한다. 브라우저와 달리 그냥 두면 `https://evil.com\@github.com`
+         * 처럼 authority 경계를 밀어 호스트를 속일 수 있어서다. userinfo 제거는 `://`가 있는 입력에만
+         * 적용한다. 스킴 없는 정상 입력에는 `@`가 없고, `mailto:user@github.com` 같은 opaque URI가
+         * 호스트로 둔갑하는 것을 막아야 한다.
+         */
+        private fun hostOf(url: String): String {
+            val normalized = url.replace('\\', '/')
+            val authority = normalized.substringAfter("://")
+                .substringBefore('/')
+                .substringBefore('?')
+                .substringBefore('#')
+            val hostPort = if (normalized.contains("://")) authority.substringAfterLast('@') else authority
+            return hostPort.substringBefore(':').lowercase().removePrefix("www.")
+        }
+
+        /**
+         * 호스트가 [domain] 자체이거나 그 하위 도메인인지 본다.
+         *
+         * 부분 문자열 비교라면 `github.com.evil.com`이나 `?next=github.com` 같은 값이
+         * github으로 잡히므로 호스트 단위로만 판단한다.
+         */
+        private fun String.matchesHost(domain: String): Boolean =
+            this == domain || endsWith(".$domain")
+
+        /**
+         * `http` / `https` 링크만 통과시키고 나머지는 null로 버린다.
+         *
+         * 여기 담긴 값은 프론트에서 `<a href>`로, PDF 렌더링에서는 템플릿으로 그대로 흘러가므로
+         * `javascript:`, `data:`, `file:`, `vbscript:` 같은 스킴이 저장되면 저장형 XSS가 된다.
+         * 허용 목록 방식으로 http·https만 남기고, 스킴을 판별할 수 없는 값도 함께 버린다.
+         *
+         * 판별 규칙:
+         * - 경로·쿼리·프래그먼트 구분자보다 앞에 `:`가 없으면 스킴 없는 상대 URL로 보고 허용한다
+         *   (`github.com/user/repo`처럼 스킴을 빼고 오는 입력이 실제로 들어온다).
+         * - `:` 뒤가 숫자뿐이면 포트로 본다. `github.com:8443/x`가 스킴으로 오판되지 않게 한다.
+         * - 그 외에는 `:` 앞을 스킴으로 보고 http·https일 때만 허용한다.
+         *
+         * 거부는 예외가 아니라 null이다. 링크 하나 때문에 이력서 저장 전체가 실패하지 않게 한다.
+         */
+        private fun String.takeIfSafeScheme(): String? {
+            val boundary = indexOfFirst { it == '/' || it == '?' || it == '#' }.takeIf { it >= 0 } ?: length
+            val colon = indexOf(':')
+            if (colon < 0 || colon >= boundary) return this
+
+            val afterColon = substring(colon + 1, boundary)
+            if (afterColon.isNotEmpty() && afterColon.all { it.isDigit() }) return this
+
+            val scheme = substring(0, colon)
+            return takeIf { scheme.equals("http", ignoreCase = true) || scheme.equals("https", ignoreCase = true) }
+        }
+
+        /**
+         * links를 객체가 아닌 URL 배열로 보내오는 요청까지 함께 받는다.
+         *
+         * 정상 형태는 `{"github": "...", "demo": "..."}` 객체지만, AI 에이전트가 만든 JSON은
+         * `[]` 나 `["https://github.com/..."]` 처럼 배열로 내려올 수 있다. 배열이면 URL 특성으로
+         * 키를 추정하고, 비어 있으면 빈 링크로 둔다. 형태가 어긋난 요청 하나 때문에 이력서 저장
+         * 전체가 실패하지 않게 하는 것이 목적이라, 어떤 입력에도 예외를 던지지 않는다.
+         *
+         * 배열·객체 어느 쪽이든 [takeIfSafeScheme]를 통과한 `http`/`https` 링크만 슬롯에 담는다.
+         * `javascript:`나 `data:` 같은 값은 저장형 XSS 경로가 되므로 해당 슬롯을 null로 둔다.
+         * 스킴이 없는 값은 지금까지처럼 상대 URL로 보고 그대로 받는다.
+         *
+         * 배열 분기의 분류 규칙:
+         * - 문자열이 아닌 원소, 공백뿐인 문자열, 허용되지 않는 스킴, 중복 URL은 먼저 걸러낸다.
+         * - 호스트가 `github.com`이거나 그 하위 도메인인 첫 URL → `github`
+         * - 호스트가 [REPO_HOSTS]에 해당하는 첫 URL → `repo`. 없으면 남은 `github.com` URL이 `repo`로 간다.
+         * - 남은 URL은 순서대로 `demo` → `website`에 채운다.
+         *
+         * 판별은 [hostOf]로 뽑은 호스트를 [matchesHost]로 비교하므로, `github.com.evil.com`이나
+         * `?next=github.com` 같은 값은 github으로 잡히지 않는다. `github.io`도 별개 호스트라 제외된다.
+         *
+         * **한계**: 슬롯이 네 개뿐이라 걸러낸 뒤 URL이 다섯 개 이상이면 초과분은 담을 곳이 없어
+         * 버려진다. 배열은 어차피 규격에서 벗어난 입력이므로 저장을 실패시키는 대신 이 손실을
+         * 감수한다. 모든 링크를 보존해야 한다면 요청을 객체 형태로 보내야 한다.
+         */
+        @JvmStatic
+        @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
+        fun fromRaw(raw: Any?): ResumeLinkDto {
+            fun String?.orNull(): String? = this?.trim()?.takeIf { it.isNotEmpty() }
+
+            if (raw is List<*>) {
+                val remaining = raw.filterIsInstance<String>()
+                    .mapNotNull { it.orNull()?.takeIfSafeScheme() }
+                    .distinct()
+                    .toMutableList()
+
+                fun take(predicate: (String) -> Boolean): String? =
+                    remaining.firstOrNull(predicate)?.also { remaining.remove(it) }
+
+                fun isGithub(url: String): Boolean = hostOf(url).matchesHost(GITHUB_HOST)
+
+                val github = take(::isGithub)
+                val repo = take { url -> hostOf(url).let { host -> REPO_HOSTS.any { host.matchesHost(it) } } }
+                    ?: take(::isGithub)
+
+                return ResumeLinkDto(
+                    demo = remaining.getOrNull(0),
+                    repo = repo,
+                    github = github,
+                    website = remaining.getOrNull(1)
+                )
+            }
+
+            if (raw is Map<*, *>) {
+                fun value(key: String): String? = (raw[key] as? String).orNull()?.takeIfSafeScheme()
+                return ResumeLinkDto(
+                    demo = value("demo"),
+                    repo = value("repo"),
+                    github = value("github"),
+                    website = value("website")
+                )
+            }
+
+            return ResumeLinkDto()
+        }
     }
 }
